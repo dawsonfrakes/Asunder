@@ -223,6 +223,11 @@ static iptr proc(HWND hwnd, unsigned int msg, uptr wp, iptr lp) {
 	case WM_SYSKEYDOWN:
 	case WM_SYSKEYUP: {
 		u8 pressed = msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN;
+		if (pressed) {
+			u8 repeat = ((uptr) lp & (1 << 30)) != 0;
+			if (repeat) break;
+		}
+
 #define INPUT_HANDLE_KEY_PRESS(K) input.keys = (input.keys & ~(u32) (K)) | ((u32) (K) * pressed)
 		switch (wp) {
 		case 'W': INPUT_HANDLE_KEY_PRESS(GAME_KEY_FORWARD); break;
@@ -233,6 +238,7 @@ static iptr proc(HWND hwnd, unsigned int msg, uptr wp, iptr lp) {
 		}
 #undef INPUT_HANDLE_KEY_PRESS
 	} break;
+	case WM_KILLFOCUS: input.keys = 0; break;
 	case WM_PAINT: ValidateRgn(hwnd, 0); break;
 	case WM_ERASEBKGND: result = 1; break;
 	case WM_DESTROY: PostQuitMessage(0); break;
