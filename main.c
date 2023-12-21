@@ -32,13 +32,14 @@ struct GameMemory {
 #define GAME_KEY_RIGHT 4
 #define GAME_KEY_LEFT 8
 struct GameInput {
+	u16 window_w, window_h;
 	f32 dt;
 	u32 keys;
 };
 
 struct GamePixelBuffer {
 	u32 *ptr;
-	u16 w, h; // @note: w must be 16 aligned
+	u16 w, h; // @note: w, h must be 16 aligned
 };
 
 static v2 V2(f32 x, f32 y) {
@@ -161,18 +162,18 @@ static void game_update(struct GameMemory *memory, struct GameInput *input, stru
 		V2(p.x + half_w, p.y + half_h),
 	};
 
-	// denormalize: [-1, 1] -> [0, pixbuf] @todo: use screen.xy not pixbuf
+	// denormalize: [-1, 1] -> [0, window]
 	for (v2 *point = points; point < points + LENGTH(points); ++point) {
-		point->x *= (f32) pixbuf->h / (f32) pixbuf->w; // aspect correction @todo use screen not pixbuf
+		point->x *= (f32) input->window_h / (f32) input->window_w; // aspect correction
 		point->x += 1.0f;
 		point->x /= 2.0f;
 		point->x = CLAMP(0.0f, point->x, 1.0f);
-		point->x *= (f32) pixbuf->w;
+		point->x *= (f32) input->window_w;
 
 		point->y += 1.0f;
 		point->y /= 2.0f;
 		point->y = CLAMP(0.0f, point->y, 1.0f);
-		point->y *= (f32) pixbuf->h;
+		point->y *= (f32) input->window_h;
 	}
 
 	u16 xmin = (u16) points[0].x;
@@ -191,17 +192,16 @@ static struct GameInput input;
 static struct GamePixelBuffer pixbuf;
 
 static void *hdc, *mdc;
-static u16 window_w, window_h;
 static iptr proc(HWND hwnd, unsigned int msg, uptr wp, iptr lp) {
 	iptr result = 0;
 	switch (msg) {
 	case WM_CREATE: hdc = GetDC(hwnd); break;
 	case WM_SIZE: {
-		window_w = (u16) (u64) lp;
-		window_h = (u16) ((u64) lp >> 16);
+		input.window_w = (u16) (u64) lp;
+		input.window_h = (u16) ((u64) lp >> 16);
 
-		pixbuf.w = (window_w + 15) / 16 * 16;
-		pixbuf.h = window_h;
+		pixbuf.w = (input.window_w + 15) / 16 * 16;
+		pixbuf.h = (input.window_h + 15) / 16 * 16;
 
 		static BITMAPINFO bmi;
 		bmi.bmiHeader.biSize = sizeof bmi;
@@ -278,7 +278,7 @@ void WinMainCRTStartup(void) {
 
 		game_update(&memory, &input, &pixbuf);
 
-		BitBlt(hdc, 0, 0, window_w, window_h, mdc, 0, 0, SRCCOPY);
+		BitBlt(hdc, 0, 0, input.window_w, input.window_h, mdc, 0, 0, SRCCOPY);
 	}
 
 end:
