@@ -153,7 +153,7 @@ static void game_update(struct GameMemory *memory, struct GameInput *input, stru
 	v3 p = V3zero();
 	p.x += gs->cube_pos.x; p.y += gs->cube_pos.y; p.z += gs->cube_pos.z; // translate
 	p.x -= gs->camera_pos.x; p.y -= gs->camera_pos.y; p.z -= gs->camera_pos.z; // view
-	p.x /= p.z; p.y /= p.z; // project
+	p.x /= -p.z; p.y /= -p.z; // project
 
 	f32 half_w = 0.1f;
 	f32 half_h = 0.1f;
@@ -197,8 +197,8 @@ static iptr proc(HWND hwnd, unsigned int msg, uptr wp, iptr lp) {
 	switch (msg) {
 	case WM_CREATE: hdc = GetDC(hwnd); break;
 	case WM_SIZE: {
-		input.window_w = (u16) (u64) lp;
-		input.window_h = (u16) ((u64) lp >> 16);
+		input.window_w = (u16) (uptr) lp;
+		input.window_h = (u16) ((uptr) lp >> 16);
 
 		pixbuf.w = (input.window_w + 15) / 16 * 16;
 		pixbuf.h = (input.window_h + 15) / 16 * 16;
@@ -278,7 +278,7 @@ void WinMainCRTStartup(void) {
 
 		game_update(&memory, &input, &pixbuf);
 
-		BitBlt(hdc, 0, 0, input.window_w, input.window_h, mdc, 0, 0, SRCCOPY);
+		BitBlt(hdc, 0, 0, input.window_w, input.window_h, mdc, 0, pixbuf.h - input.window_h, SRCCOPY);
 	}
 
 end:
