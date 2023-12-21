@@ -12,18 +12,44 @@ typedef intptr_t iptr;
 typedef size_t usize;
 typedef float f32;
 typedef double f64;
+typedef struct v4 { f32 x, y, z, w; } v4;
 
 struct PixelBuffer {
 	u32 *ptr;
 	u16 w, h; // @note: w must be 16 aligned
 };
 
-static void game_update(struct PixelBuffer *pixbuf) {
-	for (u16 y = 0; y < pixbuf->h; ++y) {
-		for (u16 x = 0; x < pixbuf->w; ++x) {
-			pixbuf->ptr[y * pixbuf->w + x] = 0xFFFF0000;
+static v4 V4(f32 x, f32 y, f32 z, f32 w) {
+	v4 result;
+	result.x = x;
+	result.y = y;
+	result.z = z;
+	result.w = w;
+	return result;
+}
+
+static u32 argb_color(v4 color) {
+	u32 result = ((u32) (u8) (color.w * 255.9f) << 24) |
+		 ((u32) (u8) (color.x * 255.9f) << 16) |
+		 ((u32) (u8) (color.y * 255.9f) << 8) |
+		 ((u32) (u8) (color.z * 255.9f) << 0);
+	return result;
+}
+
+static void pixbuf_rect(struct PixelBuffer *pixbuf, u16 x1, u16 y1, u16 x2, u16 y2, u32 color) {
+	for (u16 y = y1; y < y2; ++y) {
+		for (u16 x = x1; x < x2; ++x) {
+			pixbuf->ptr[y * pixbuf->w + x] = color;
 		}
 	}
+}
+
+static void pixbuf_clear(struct PixelBuffer *pixbuf, v4 color) {
+	pixbuf_rect(pixbuf, 0, 0, pixbuf->w, pixbuf->h, argb_color(color));
+}
+
+static void game_update(struct PixelBuffer *pixbuf) {
+	pixbuf_clear(pixbuf, V4(1.0f, 0.0f, 1.0f, 1.0f));
 }
 
 #define NOMINMAX
