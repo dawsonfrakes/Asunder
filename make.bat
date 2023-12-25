@@ -1,7 +1,8 @@
 @if not exist .bin (mkdir .bin & attrib +h .bin)
-clang -o .bin/Asunder.exe src/win_main.c^
+clang -o .bin/main.exe main.c^
  -g -gcodeview^
- -Wall -Wextra -pedantic -Wvla -Wshadow -Wunused-macros -Wconversion -Wsign-conversion -Wimplicit-fallthrough^
- -fuse-ld=lld -Wl,-subsystem,windows -Wl,-pdb=^
- -Xlinker -stack=0x1000,0x1000 -Xlinker -heap=0,0^
+ -m64 -std=c99 -Wall -Wextra -pedantic -Wvla -Wshadow -Wunused-macros^
+ -Wconversion -Wsign-conversion -Wimplicit-fallthrough -Wcomment -Wcast-align -Wextra-semi -Wdeclaration-after-statement^
+ -fuse-ld=lld -ffast-math -fno-exceptions -fno-strict-aliasing^
+ -Wl,-subsystem,windows -Wl,-entry,_start -Wl,-pdb=^
  -nostdlib -lkernel32 -luser32 -lgdi32
