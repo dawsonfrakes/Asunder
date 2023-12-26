@@ -18,6 +18,7 @@ enum GameKeys {
 	GAME_KEY_LEFT     = 0x8,
 };
 
+static const uint8_t fullscreen = 0;
 static void *hdc, *mdc;
 static uint16_t window_width, window_height;
 
@@ -162,11 +163,24 @@ static intptr_t
 proc(HWND hwnd, unsigned int msg, uintptr_t wp, intptr_t lp)
 {
 	static BITMAPINFO bmi;
+	static MONITORINFO mi;
 	static void *hbm;
 	intptr_t result = 0;
 
 	switch (msg) {
-	case WM_CREATE: hdc = GetDC(hwnd); break;
+	case WM_CREATE:
+		hdc = GetDC(hwnd);
+
+		if (fullscreen) {
+			mi.cbSize = sizeof(MONITORINFO);
+			GetMonitorInfoA(MonitorFromWindow(hwnd, MONITOR_DEFAULTTOPRIMARY), &mi);
+			SetWindowPos(hwnd, HWND_TOP,
+			             mi.rcMonitor.left, mi.rcMonitor.top,
+			             mi.rcMonitor.right - mi.rcMonitor.left,
+			             mi.rcMonitor.bottom - mi.rcMonitor.top,
+			             SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+		}
+		break;
 	case WM_KEYDOWN:
 	case WM_KEYUP:
 		handle_keypress(msg, wp, lp);
@@ -208,7 +222,7 @@ void
 _start(void) {
 	static WNDCLASSA wndclass;
 	static MSG msg;
-	uint64_t freq, start, previous, current;
+	static uint64_t freq, start, previous, current;
 
 	QueryPerformanceFrequency((LARGE_INTEGER *) &freq);
 	QueryPerformanceCounter((LARGE_INTEGER *) &start);
@@ -222,9 +236,9 @@ _start(void) {
 	RegisterClassA(&wndclass);
 
 	CreateWindowExA(0, wndclass.lpszClassName, "Title",
-		WS_SYSMENU | WS_CAPTION | WS_THICKFRAME | WS_VISIBLE,
-		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
-		0, 0, wndclass.hInstance, 0);
+	                (fullscreen ? WS_POPUP : WS_SYSMENU | WS_CAPTION | WS_THICKFRAME) | WS_VISIBLE,
+	                CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
+	                0, 0, wndclass.hInstance, 0);
 
 	for (;;) {
 		while (PeekMessageA(&msg, 0, 0, 0, PM_REMOVE)) {
