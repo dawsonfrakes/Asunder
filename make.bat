@@ -1,8 +1,15 @@
 @if not exist .bin (mkdir .bin & attrib +h .bin)
-clang -o .bin/main.exe main.c^
+
+@rem Error on new comment style (// comment) because clang's -Wcomment doesn't warn with -std=c99
+@findstr /n /o "\/\/" windows_main.c && (echo BAD COMMENT STYLE & exit /b)
+
+clang -o .bin/Asunder.exe windows_main.c^
  -g -gcodeview^
- -m64 -std=c99 -Wall -Wextra -pedantic -Wvla -Wshadow -Wunused-macros^
- -Wconversion -Wsign-conversion -Wimplicit-fallthrough -Wcomment -Wcast-align -Wextra-semi -Wdeclaration-after-statement^
- -fuse-ld=lld -ffast-math -fno-exceptions -fno-strict-aliasing^
- -Wl,-subsystem,windows -Wl,-entry,_start -Wl,-pdb=^
- -nostdlib -lkernel32 -luser32 -lgdi32
+ -DRENDERER_OPENGL=1^
+ -m64 -march=native^
+ -std=c99 -Wall -Wextra -pedantic -Wvla -Wshadow -Wunused-macros -Wconversion -Wsign-conversion^
+ -Wextra-semi-stmt -Wdeclaration-after-statement -Wimplicit-fallthrough^
+ -fuse-ld=lld -ffast-math -fno-strict-aliasing -fno-exceptions -mno-stack-arg-probe^
+ -Wl,-subsystem,windows -Wl,-pdb=^
+ -Xlinker -stack=0x1000,0x1000 -Xlinker -heap=0,0^
+ -nostdlib -lkernel32 -luser32 -lgdi32 -lopengl32
