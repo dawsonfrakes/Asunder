@@ -79,7 +79,7 @@ typedef struct {
 	u32 texture_index;
 } OpenGLRectInstance;
 
-typedef u8 OpenGLModelIndex;
+typedef u32 OpenGLModelIndex;
 typedef struct {
 	v3 position;
 	v2 texcoord;
@@ -89,7 +89,7 @@ typedef struct {
 	m4 world_transform;
 } OpenGLModelInstance;
 
-u8 opengl_arena_backing[1024 * 1024 * 4];
+u8 opengl_arena_backing[1024 * 1024 * 8];
 Arena opengl_arena;
 
 u32 opengl_main_fbo;
@@ -112,6 +112,26 @@ OpenGLModelVertex opengl_triangle_model_vertices[] = {
 	{.position = {-0.5f, -0.5f, 0.0f}, .texcoord = {0.0f, 0.0f}, .texture_index = 1},
 	{.position = {+0.5f, -0.5f, 0.0f}, .texcoord = {1.0f, 0.0f}, .texture_index = 1},
 	{.position = {0.0f, +0.5f, 0.0f}, .texcoord = {0.5f, 1.0f}, .texture_index = 1},
+};
+OpenGLModelIndex opengl_rectangle_model_indices[] = {0, 1, 2, 2, 3, 0};
+OpenGLModelVertex opengl_rectangle_model_vertices[] = {
+	{.position = {-0.5f, -0.5f, 0.0f}, .texcoord = {0.0f, 0.0f}, .texture_index = 1},
+	{.position = {+0.5f, -0.5f, 0.0f}, .texcoord = {1.0f, 0.0f}, .texture_index = 1},
+	{.position = {+0.5f, +0.5f, 0.0f}, .texcoord = {1.0f, 1.0f}, .texture_index = 1},
+	{.position = {-0.5f, +0.5f, 0.0f}, .texcoord = {0.0f, 1.0f}, .texture_index = 1},
+};
+
+OpenGLModelIndex model_kind_to_vbo_offset[] = {
+	[MODEL_TRIANGLE] = 0,
+	[MODEL_RECTANGLE] = 3,
+};
+OpenGLModelIndex model_kind_to_indices_count[] = {
+	[MODEL_TRIANGLE] = 3,
+	[MODEL_RECTANGLE] = 6,
+};
+OpenGLModelIndex* model_kind_to_indices[] = {
+	[MODEL_TRIANGLE] = opengl_triangle_model_indices,
+	[MODEL_RECTANGLE] = opengl_rectangle_model_indices,
 };
 
 #define MAX_RECTS_PER_DRAW_CALL 1024
@@ -208,9 +228,11 @@ void opengl_init(void) {
 
 	{
 		glCreateBuffers(1, &opengl_model_vbo);
-		glNamedBufferData(opengl_model_vbo, size_of(opengl_triangle_model_vertices), opengl_triangle_model_vertices, GL_STATIC_DRAW);
+		glNamedBufferData(opengl_model_vbo, size_of(opengl_triangle_model_vertices) + size_of(opengl_rectangle_model_vertices), null, GL_STATIC_DRAW);
+		glNamedBufferSubData(opengl_model_vbo, model_kind_to_vbo_offset[MODEL_TRIANGLE] * size_of(OpenGLModelVertex), size_of(opengl_triangle_model_vertices), opengl_triangle_model_vertices);
+		glNamedBufferSubData(opengl_model_vbo, model_kind_to_vbo_offset[MODEL_RECTANGLE] * size_of(OpenGLModelVertex), size_of(opengl_rectangle_model_vertices), opengl_rectangle_model_vertices);
 		glCreateBuffers(1, &opengl_model_ebo);
-		glNamedBufferData(opengl_model_ebo, size_of(opengl_triangle_model_indices), opengl_triangle_model_indices, GL_STATIC_DRAW);
+		glNamedBufferData(opengl_model_ebo, size_of(OpenGLModelIndex) * MAX_MODELS_PER_DRAW_CALL * 1024, null, GL_STREAM_DRAW);
 		glCreateBuffers(1, &opengl_model_ibo);
 		glNamedBufferData(opengl_model_ibo, size_of(OpenGLModelInstance) * MAX_MODELS_PER_DRAW_CALL, null, GL_STREAM_DRAW);
 
@@ -320,6 +342,8 @@ void opengl_present(GameRenderer* game_renderer) {
 	s32 model_instances_count = 0;
 	OpenGLRectInstance* rect_instances = arena_alloc(&opengl_arena, size_of(OpenGLRectInstance) * MAX_RECTS_PER_DRAW_CALL);
 	s32 rect_instances_count = 0;
+	OpenGLModelIndex* model_indices = arena_alloc(&opengl_arena, size_of(OpenGLModelIndex) * MAX_MODELS_PER_DRAW_CALL * 1024);
+	s32 model_indices_count = 0;
 	for (GameRenderCommand* command = game_renderer->commands_arena.base;
 		cast(u8*) command < cast(u8*) game_renderer->commands_arena.base + game_renderer->commands_arena.size;
 		command += 1)
@@ -340,11 +364,17 @@ void opengl_present(GameRenderer* game_renderer) {
 			} break;
 			case RENDER_COMMAND_MODEL: {
 				OpenGLModelInstance* instance = &model_instances[model_instances_count++];
+				OpenGLModelIndex base_index = model_kind_to_vbo_offset[command->u.model.kind];
+				for (OpenGLModelIndex i = 0; i < model_kind_to_indices_count[command->u.model.kind]; i += 1) {
+					OpenGLModelIndex* index = &model_indices[model_indices_count++];
+					*index = base_index + model_kind_to_indices[command->u.model.kind][i];
+				}
 				instance->world_transform = command->u.model.world_transform;
 			} break;
 			default: assert(0); break;
 		}
 	}
+	glNamedBufferSubData(opengl_model_ebo, 0, model_indices_count * size_of(OpenGLModelIndex), model_indices);
 	glNamedBufferSubData(opengl_model_ibo, 0, model_instances_count * size_of(OpenGLModelInstance), model_instances);
 	glNamedBufferSubData(opengl_rect_ibo, 0, rect_instances_count * size_of(OpenGLRectInstance), rect_instances);
 	arena_reset(&opengl_arena);
@@ -354,8 +384,8 @@ void opengl_present(GameRenderer* game_renderer) {
 	glBindVertexArray(opengl_model_vao);
 	glDrawElementsInstancedBaseVertexBaseInstance(
 		GL_TRIANGLES,
-		len(opengl_triangle_model_indices),
-		GL_UNSIGNED_BYTE,
+		model_indices_count,
+		GL_UNSIGNED_INT,
 		cast(void*) 0,
 		model_instances_count,
 		0, 0);

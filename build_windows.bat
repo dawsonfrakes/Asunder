@@ -1,5 +1,7 @@
 @echo off
 
+python src\generator.py
+
 where /q cl || call vcvars64.bat || goto :error
 
 cl -FeZ1X1.exe -nologo -W4 -WX -Z7 -Oi -J -EHa- -GR- -GS- -Gs0x10000000^

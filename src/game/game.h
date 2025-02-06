@@ -1,3 +1,5 @@
+#include "../../gen/enums.h"
+
 typedef struct {
 	f32 delta;
 	s32 width;
@@ -16,6 +18,13 @@ typedef enum {
 	RENDER_COMMAND_MODEL = 2,
 } GameRenderCommandKind;
 
+typedef enum {
+	MODEL_NONE = 0,
+	MODEL_TRIANGLE = 1,
+	MODEL_RECTANGLE = 2,
+	MODEL_CUBE = 3,
+} GameModelKind;
+
 typedef struct {
 	GameRenderCommandKind kind;
 	union {
@@ -27,6 +36,7 @@ typedef struct {
 		} rect;
 		struct {
 			m4 world_transform;
+			GameModelKind kind;
 		} model;
 	} u;
 } GameRenderCommand;

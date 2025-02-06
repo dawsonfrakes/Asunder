@@ -167,17 +167,41 @@ void textured_rect(f32 x, f32 y, f32 w, f32 h, f32 tx1, f32 ty1, f32 tx2, f32 ty
 	command->u.rect.texture_index = texture_index;
 }
 
-void model(v3 position) {
+m4 m4mul(m4 a, m4 b) {
+	m4 result = {{0}};
+	for (s32 i = 0; i < 4; i += 1)
+		for (s32 j = 0; j < 4; j += 1)
+			for (s32 k = 0; k < 4; k += 1)
+				result.e[i * 4 + j] += b.e[i * 4 + k] * a.e[k * 4 + j];
+	return result;
+}
+
+m4 perspective(f32 aspect_ratio, f32 z_near) {
+	f32 focal_length = 1.0f;
+	m4 result = {{
+		focal_length / aspect_ratio, 0.0f, 0.0f, 0.0f,
+		0.0f, focal_length, 0.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, -1.0f,
+		0.0f, 0.0f, z_near, 0.0f,
+	}};
+	return result;
+}
+
+void model(GameModelKind kind, v3 position, v3 rotation, v3 scale) {
+	(void) rotation;
+	(void) scale;
 	GameRenderCommand* command = alloc_render_command(RENDER_COMMAND_MODEL);
+	command->u.model.kind = kind;
 	f32 x = position.x - state->player.position.x;
 	f32 y = position.y - state->player.position.y;
 	f32 z = position.z - state->player.position.z;
 	command->u.model.world_transform = (m4) {{
-		1.0f / -z, 0.0f, 0.0f, 0.0f,
-		0.0f, 1.0f / -z, 0.0f, 0.0f,
+		1.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 1.0f, 0.0f, 0.0f,
 		0.0f, 0.0f, 1.0f, 0.0f,
 		x, y, z, 1.0f,
 	}};
+	command->u.model.world_transform = m4mul(perspective(cast(float) input->width / max(1, input->height), 0.01f), command->u.model.world_transform);
 }
 
 v4 calculate_text_bounds(string s, f32 x, f32 scale, f32 pad) {
@@ -257,14 +281,10 @@ void game_update_and_render(GameInput* new_input, GameRenderer* new_renderer, Ga
 	if (input->keys['D']) state->player.position.x += input->delta;
 	if (input->keys['A']) state->player.position.x -= input->delta;
 
-	rect(0, 0, 500, 500, (v4) {0.2f, 0.2f, 0.2f, 1.0f});
-	rect(cast(f32) (input->width - 1), cast(f32) (input->height - 1), -500, -500, (v4) {1.0f, 0.2f, 0.2f, 1.0f});
+	if (button(S("Quit"), 50.0f, 1.0f)) input->wants_quit = true;
 
-	if (button(S("Quit"), 0.0f, 2.0f)) {
-		input->wants_quit = true;
-	}
-
-	model((v3) {0.0f, 0.0f, -1.0f});
+	model(MODEL_TRIANGLE, (v3) {0.0f, 0.0f, -1.0f}, (v3) {0.0f, 0.0f, 0.0f}, (v3) {1.0f, 1.0f, 1.0f});
+	model(MODEL_RECTANGLE, (v3) {2.0f, 0.0f, -1.0f}, (v3) {0.0f, 0.0f, 0.0f}, (v3) {1.0f, 1.0f, 1.0f});
 
 	ui->lmb_prev = input->lmb;
 }
