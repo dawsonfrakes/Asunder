@@ -1,6 +1,7 @@
 #if OS == .WINDOWS #import "Winblows";
 
 VkFlags :: u32;
+VkBool32 :: u32;
 VkInstance :: #type,distinct *void;
 PFN_vkVoidFunction :: #type () #c_call;
 PFN_vkAllocationFunction :: #type (data: *void, size: u64, alignmenmt: u64, scope: VkSystemAllocationScope) -> *void #c_call;
@@ -60,6 +61,8 @@ VkStructureType :: enum s32 {
   VK_STRUCTURE_TYPE_LOADER_INSTANCE_CREATE_INFO :: 47;
   // Provided by VK_KHR_win32_surface
   VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR :: 1000009000;
+  // Provided by VK_EXT_debug_utils
+  VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT :: 1000128004;
 }
 VkResult :: enum s32 {
   VK_SUCCESS :: 0;
@@ -81,6 +84,34 @@ VkResult :: enum s32 {
   VK_ERROR_FORMAT_NOT_SUPPORTED :: -11;
   VK_ERROR_FRAGMENTED_POOL :: -12;
   VK_ERROR_UNKNOWN :: -13;
+}
+VkObjectType :: enum s32 {
+  VK_OBJECT_TYPE_UNKNOWN :: 0;
+  VK_OBJECT_TYPE_INSTANCE :: 1;
+  VK_OBJECT_TYPE_PHYSICAL_DEVICE :: 2;
+  VK_OBJECT_TYPE_DEVICE :: 3;
+  VK_OBJECT_TYPE_QUEUE :: 4;
+  VK_OBJECT_TYPE_SEMAPHORE :: 5;
+  VK_OBJECT_TYPE_COMMAND_BUFFER :: 6;
+  VK_OBJECT_TYPE_FENCE :: 7;
+  VK_OBJECT_TYPE_DEVICE_MEMORY :: 8;
+  VK_OBJECT_TYPE_BUFFER :: 9;
+  VK_OBJECT_TYPE_IMAGE :: 10;
+  VK_OBJECT_TYPE_EVENT :: 11;
+  VK_OBJECT_TYPE_QUERY_POOL :: 12;
+  VK_OBJECT_TYPE_BUFFER_VIEW :: 13;
+  VK_OBJECT_TYPE_IMAGE_VIEW :: 14;
+  VK_OBJECT_TYPE_SHADER_MODULE :: 15;
+  VK_OBJECT_TYPE_PIPELINE_CACHE :: 16;
+  VK_OBJECT_TYPE_PIPELINE_LAYOUT :: 17;
+  VK_OBJECT_TYPE_RENDER_PASS :: 18;
+  VK_OBJECT_TYPE_PIPELINE :: 19;
+  VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT :: 20;
+  VK_OBJECT_TYPE_SAMPLER :: 21;
+  VK_OBJECT_TYPE_DESCRIPTOR_POOL :: 22;
+  VK_OBJECT_TYPE_DESCRIPTOR_SET :: 23;
+  VK_OBJECT_TYPE_FRAMEBUFFER :: 24;
+  VK_OBJECT_TYPE_COMMAND_POOL :: 25;
 }
 VkInternalAllocationType :: enum s32 {
 	VK_INTERNAL_ALLOCATION_TYPE_EXECUTABLE :: 0;
@@ -124,6 +155,69 @@ VkInstanceCreateInfo :: struct {
 PFN_vkGetInstanceProcAddr :: #type (instance: VkInstance, name: *u8) -> PFN_vkVoidFunction #c_call;
 PFN_vkCreateInstance :: #type (info: *VkInstanceCreateInfo, allocator: *VkAllocationCallbacks, instance: *VkInstance) -> VkResult #c_call;
 PFN_vkDestroyInstance :: #type (instance: VkInstance, allocator: *VkAllocationCallbacks) #c_call;
+
+// VK_EXT_debug_utils
+VK_EXT_DEBUG_UTILS_EXTENSION_NAME :: "VK_EXT_debug_utils";
+
+VkDebugUtilsMessengerEXT :: #type,distinct *void;
+PFN_vkDebugUtilsMessengerCallbackEXT :: #type (severity: VkDebugUtilsMessageSeverityFlagsEXT, types: VkDebugUtilsMessageTypeFlagsEXT, callback_data: *VkDebugUtilsMessengerCallbackDataEXT, data: *void) -> VkBool32 #c_call;
+VkDebugUtilsLabelEXT :: struct {
+  sType: VkStructureType;
+  pNext: *void;
+  pLabelName: *u8;
+  color: [4]float;
+}
+VkDebugUtilsObjectNameInfoEXT :: struct {
+  sType: VkStructureType;
+  pNext: *void;
+  objectType: VkObjectType;
+  objectHandle: u64;
+  pObjectName: *u8;
+}
+VkDebugUtilsMessengerCallbackDataFlagsEXT :: VkFlags;
+VkDebugUtilsMessengerCallbackDataEXT :: struct {
+  sType: VkStructureType;
+  pNext: *void;
+  flags: VkDebugUtilsMessengerCallbackDataFlagsEXT;
+  pMessageIdName: *u8;
+  messageIdNumber: s32;
+  pMessage: *u8;
+  queueLabelCount: u32;
+  pQueueLabels: *VkDebugUtilsLabelEXT;
+  cmdBufLabelCount: u32;
+  pCmdBufLabels: *VkDebugUtilsLabelEXT;
+  objectCount: u32;
+  pObjects: *VkDebugUtilsObjectNameInfoEXT;
+}
+VkDebugUtilsMessageSeverityFlagsEXT :: enum_flags s32 {
+  VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT :: 0x00000001;
+  VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT :: 0x00000010;
+  VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT :: 0x00000100;
+  VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT :: 0x00001000;
+}
+VkDebugUtilsMessageTypeFlagsEXT :: enum_flags s32 {
+  VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT :: 0x00000001;
+  VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT :: 0x00000002;
+  VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT :: 0x00000004;
+}
+VkDebugUtilsMessengerCreateFlagsEXT :: enum_flags s32 {
+  VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT :: 0x00000001;
+  VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT :: 0x00000010;
+  VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT :: 0x00000100;
+  VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT :: 0x00001000;
+}
+VkDebugUtilsMessengerCreateInfoEXT :: struct {
+  sType: VkStructureType;
+  pNext: *void;
+  flags: VkDebugUtilsMessengerCreateFlagsEXT;
+  messageSeverity: VkDebugUtilsMessageSeverityFlagsEXT;
+  messageType: VkDebugUtilsMessageTypeFlagsEXT;
+  pfnUserCallback: PFN_vkDebugUtilsMessengerCallbackEXT;
+  pUserData: *void;
+}
+
+PFN_vkCreateDebugUtilsMessengerEXT :: #type (instance: VkInstance, info: *VkDebugUtilsMessengerCreateInfoEXT, allocator: *VkAllocationCallbacks, messenger: *VkDebugUtilsMessengerEXT) -> VkResult #c_call;
+PFN_vkDestroyDebugUtilsMessengerEXT :: #type (instance: VkInstance, messenger: VkDebugUtilsMessengerEXT, allocator: *VkAllocationCallbacks) #c_call;
 
 // VK_KHR_surface
 VK_KHR_SURFACE_EXTENSION_NAME :: "VK_KHR_surface";

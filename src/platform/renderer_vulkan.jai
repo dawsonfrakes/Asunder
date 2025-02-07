@@ -7,6 +7,10 @@ VK :: struct {
 	vkGetInstanceProcAddr: PFN_vkGetInstanceProcAddr; @Exported
 	vkCreateInstance: PFN_vkCreateInstance; @Global
 	vkDestroyInstance: PFN_vkDestroyInstance; @Instance
+	#if DEBUG {
+		vkCreateDebugUtilsMessengerEXT: PFN_vkCreateDebugUtilsMessengerEXT; @Instance
+		vkDestroyDebugUtilsMessengerEXT: PFN_vkDestroyDebugUtilsMessengerEXT; @Instance
+	}
 	#if OS == .WINDOWS {
 		vkCreateWin32SurfaceKHR: PFN_vkCreateWin32SurfaceKHR; @Instance
 		vkDestroySurfaceKHR: PFN_vkDestroySurfaceKHR; @Instance
@@ -14,6 +18,7 @@ VK :: struct {
 
 	instance: VkInstance;
 	surface: VkSurfaceKHR;
+	#if DEBUG debug_messenger: VkDebugUtilsMessengerEXT;
 }
 using vk: VK;
 
@@ -51,10 +56,38 @@ vulkan_init :: () #no_context {
 		`return;
 	}
 
+	#if DEBUG {
+		debug_messenger_create_info: VkDebugUtilsMessengerCreateInfoEXT;
+
+		{
+			using debug_messenger_create_info;
+			sType = .VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+			messageSeverity = .VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+				.VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
+				.VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+				.VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+			messageType = .VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+				.VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+				.VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+			pfnUserCallback = (severity: VkDebugUtilsMessageSeverityFlagsEXT, types: VkDebugUtilsMessageTypeFlagsEXT, callback_data: *VkDebugUtilsMessengerCallbackDataEXT, data: *void) -> VkBool32 #c_call {
+				len := c_style_strlen(callback_data.pMessage);
+				push_context { print("%\n", string.{len, callback_data.pMessage}); }
+				return xx false;
+			};
+		}
+	}
+
 	{
-		extensions :: (*u8).["VK_KHR_surface", "VK_KHR_win32_surface"];
+		layers :: #ifx DEBUG then (*u8).["VK_layer_khronos_validation"] else (*u8).[];
+		extensions: [#ifx DEBUG 3 else 2]*u8;
+		extensions[0] = VK_KHR_SURFACE_EXTENSION_NAME;
+		#if OS == .WINDOWS extensions[1] = VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
+		else #assert(false, "OS not supported");
+		#if DEBUG extensions[2] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
+
 		using info: VkInstanceCreateInfo;
 		sType = .VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+		#if DEBUG pNext = *debug_messenger_create_info;
 		enabledExtensionCount = extensions.count;
 		ppEnabledExtensionNames = extensions.data;
 		result = vkCreateInstance(*info, null, *instance);
@@ -71,6 +104,11 @@ vulkan_init :: () #no_context {
 		return builder_to_string(*b);
 	}
 
+	#if DEBUG {{
+		result = vkCreateDebugUtilsMessengerEXT(instance, *debug_messenger_create_info, null, *debug_messenger);
+		return_if_not_success_or();
+	}}
+
 	#if OS == .WINDOWS {{
 		using info: VkWin32SurfaceCreateInfoKHR;
 		sType = .VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
@@ -83,6 +121,7 @@ vulkan_init :: () #no_context {
 
 vulkan_deinit :: () #no_context {
 	if instance {
+		#if DEBUG if debug_messenger vkDestroyDebugUtilsMessengerEXT(instance, debug_messenger, null);
 		if surface vkDestroySurfaceKHR(instance, surface, null);
 		vkDestroyInstance(instance, null);
 	}
