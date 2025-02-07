@@ -2,7 +2,7 @@
 #import "Omnicode";
 
 Render_API :: enum { NONE :: 0; OPENGL :: 1; VULKAN :: 2; }
-render_api :: Render_API.VULKAN;
+render_api :: Render_API.OPENGL;
 
 #if render_api == .VULKAN {
 	#load "renderer_vulkan.jai";

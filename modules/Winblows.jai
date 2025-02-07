@@ -5,6 +5,8 @@ HMODULE :: HINSTANCE;
 PROC :: #type () -> s64 #c_call;
 
 GetModuleHandleW :: (name: *u16) -> HMODULE #foreign kernel32;
+LoadLibraryA :: (name: *u8) -> HMODULE #foreign kernel32;
+GetProcAddress :: (module: HMODULE, name: *u8) -> PROC #foreign kernel32;
 Sleep :: (duration: u32) #foreign kernel32;
 
 user32 :: #library,system "user32";
@@ -126,6 +128,55 @@ SetWindowPos :: (hwnd: HWND, after: HWND, x: s32, y: s32, w: s32, h: s32, flags:
 MonitorFromWindow :: (hwnd: HWND, flags: u32) -> HMONITOR #foreign user32;
 GetMonitorInfoW :: (monitor: HMONITOR, mi: *MONITORINFO) -> s32 #foreign user32;
 DestroyWindow :: (hwnd: HWND) -> s32 #foreign user32;
+
+gdi32 :: #library,system "gdi32";
+
+PFD_DOUBLEBUFFER :: 0x00000001;
+PFD_DRAW_TO_WINDOW :: 0x00000004;
+PFD_SUPPORT_OPENGL :: 0x00000020;
+PFD_DEPTH_DONTCARE :: 0x20000000;
+
+PIXELFORMATDESCRIPTOR :: struct {
+  nSize: u16;
+  nVersion: u16;
+  dwFlags: u32;
+  iPixelType: u8;
+  cColorBits: u8;
+  cRedBits: u8;
+  cRedShift: u8;
+  cGreenBits: u8;
+  cGreenShift: u8;
+  cBlueBits: u8;
+  cBlueShift: u8;
+  cAlphaBits: u8;
+  cAlphaShift: u8;
+  cAccumBits: u8;
+  cAccumRedBits: u8;
+  cAccumGreenBits: u8;
+  cAccumBlueBits: u8;
+  cAccumAlphaBits: u8;
+  cDepthBits: u8;
+  cStencilBits: u8;
+  cAuxBuffers: u8;
+  iLayerType: u8;
+  bReserved: u8;
+  dwLayerMask: u32;
+  dwVisibleMask: u32;
+  dwDamageMask: u32;
+}
+
+ChoosePixelFormat :: (hdc: HDC, pfd: *PIXELFORMATDESCRIPTOR) -> s32 #foreign gdi32;
+SetPixelFormat :: (hdc: HDC, format: s32, pfd: *PIXELFORMATDESCRIPTOR) -> s32 #foreign gdi32;
+SwapBuffers :: (hdc: HDC) -> s32 #foreign gdi32;
+
+opengl32 :: #library,system "opengl32";
+
+HGLRC :: #type,distinct *void;
+
+wglCreateContext :: (hdc: HDC) -> HGLRC #foreign opengl32;
+wglDeleteContext :: (ctx: HGLRC) -> s32 #foreign opengl32;
+wglMakeCurrent :: (hdc: HDC, ctx: HGLRC) -> s32 #foreign opengl32;
+wglGetProcAddress :: (name: *u8) -> PROC #foreign opengl32;
 
 dwmapi :: #library,system "dwmapi";
 
