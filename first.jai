@@ -20,7 +20,7 @@ build :: () {
 		case; print("OS % is not currently supported\n", options.os_target);
 	}
 
-	if options.os_target == .MACOS && !DEBUG {
+	#if OS == .MACOS if options.os_target == .MACOS && !DEBUG {
 		#import "MacOS_Bundler";
 		create_app_bundle("Asunder", "./Asunder", "", "", false, false);
 	}

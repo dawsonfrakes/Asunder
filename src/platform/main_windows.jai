@@ -144,6 +144,10 @@ main :: () {
 			}
 		}
 
+		renderer.clear(.{0.3, 0.3, 0.3, 1.0}, 0.0);
+		renderer.rect(0, 0, 500, 500, .{1.0, 0.0, 0.0, 1.0});
+		renderer.trect(xx (platform_width - 1), xx (platform_height - 1), -500, -500, 0, 0, 1, 1, .FONT); // :todo font
+
 		renderer.present();
 
 		if sleep_is_granular {
