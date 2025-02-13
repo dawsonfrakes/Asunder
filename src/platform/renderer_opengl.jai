@@ -12,6 +12,9 @@
 	// 1.0
 	GL_COLOR_BUFFER_BIT :: 0x00004000;
 	GL_TRIANGLES :: 0x0004;
+	GL_TEXTURE_2D :: 0x0DE1;
+	GL_UNSIGNED_BYTE :: 0x1401;
+	GL_RGBA :: 0x1908;
 
 	glViewport: (x: s32, y: s32, w: u32, h: u32) #c_call;
 	glClearColor: (r: float32, g: float32, b: float32, a: float32) #c_call;
@@ -20,7 +23,14 @@
 	glEnd: () #c_call;
 	glColor4f: (r: float32, g: float32, b: float32, a: float32) #c_call;
 	glVertex3f: (x: float32, y: float32, z: float32) #c_call;
+	glTexCoord2f: (s: float32, t: float32) #c_call;
+	glEnable: (cap: u32) #c_call;
 	glClear: (mask: u32) #c_call;
+	glTexImage2D: (target: u32, level: s32, internalformat: s32, width: u32, height: u32, border: s32, format: u32, type: u32, pixels: *void) #c_call;
+
+	// 1.1
+	glBindTexture: (target: u32, texture: u32) #c_call;
+	glGenTextures: (n: u32, textures: *u32) #c_call;
 
 	opengl_platform_init :: () #no_context {
 		pfd: PIXELFORMATDESCRIPTOR;
@@ -57,7 +67,12 @@
 		glEnd = xx GetProcAddress(opengl32, "glEnd");
 		glColor4f = xx GetProcAddress(opengl32, "glColor4f");
 		glVertex3f = xx GetProcAddress(opengl32, "glVertex3f");
+		glTexCoord2f = xx GetProcAddress(opengl32, "glTexCoord2f");
+		glEnable = xx GetProcAddress(opengl32, "glEnable");
 		glClear = xx GetProcAddress(opengl32, "glClear");
+		glBindTexture = xx GetProcAddress(opengl32, "glBindTexture");
+		glGenTextures = xx GetProcAddress(opengl32, "glGenTextures");
+		glTexImage2D = xx GetProcAddress(opengl32, "glTexImage2D");
 	}
 
 	opengl_platform_deinit :: () #no_context {
@@ -70,8 +85,21 @@
 	}
 } else #assert(false, "OpenGL is not supported on OS %.", OS);
 
+opengl_white_texture: u32;
+
 opengl_init :: () #no_context {
 	opengl_platform_init();
+
+	glEnable(GL_TEXTURE_2D);
+	pixels: [64 * 64]u32;
+	for y: 0..63 {
+	for x: 0..63 {
+		pixels[y * 64 + x] = 0x222222FF;
+	}
+	}
+	glGenTextures(1, *opengl_white_texture);
+	glBindTexture(GL_TEXTURE_2D, opengl_white_texture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 64, 64, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data);
 }
 
 opengl_deinit :: () #no_context {
@@ -105,13 +133,19 @@ opengl_trect :: (x: float32, y: float32, w: float32, h: float32, tx1: float32, t
 	ymin := y / platform_height_divisor * 2.0 - 1.0;
 	xmax := (x + w) / platform_width_divisor * 2.0 - 1.0;
 	ymax := (y + h) / platform_height_divisor * 2.0 - 1.0;
+	glBindTexture(GL_TEXTURE_2D, opengl_white_texture);
 	glBegin(GL_TRIANGLES);
 		glColor4f(tint.r, tint.g, tint.b, tint.a);
+		glTexCoord2f(tx1, ty1);
 		glVertex3f(xmin, ymin, 0.0);
+		glTexCoord2f(tx2, ty1);
 		glVertex3f(xmax, ymin, 0.0);
+		glTexCoord2f(tx2, ty2);
 		glVertex3f(xmax, ymax, 0.0);
 		glVertex3f(xmax, ymax, 0.0);
+		glTexCoord2f(tx1, ty2);
 		glVertex3f(xmin, ymax, 0.0);
+		glTexCoord2f(tx1, ty1);
 		glVertex3f(xmin, ymin, 0.0);
 	glEnd();
 }
