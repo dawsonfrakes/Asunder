@@ -1,0 +1,6 @@
+.build/
+*.app/
+*.dSYM/
+*.exe
+*.pdb
+Asunder

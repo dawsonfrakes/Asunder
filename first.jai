@@ -1,3 +1,5 @@
+DEBUG :: true;
+
 #import "Basic";
 #import "Compiler";
 
@@ -11,10 +13,16 @@ build :: () {
 
 	w := compiler_create_workspace();
 	set_build_options(options, w);
+	add_build_string(tprint("DEBUG :: %;", DEBUG), w);
 	if options.os_target == {
 		case .WINDOWS; add_build_file("src/platform/main_windows.jai", w);
 		case .MACOS; add_build_file("src/platform/main_macos.jai", w);
 		case; print("OS % is not currently supported\n", options.os_target);
+	}
+
+	if options.os_target == .MACOS && !DEBUG {
+		#import "MacOS_Bundler";
+		create_app_bundle("Asunder", "./Asunder", "", "", false, false);
 	}
 }
 
