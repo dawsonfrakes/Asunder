@@ -20,6 +20,20 @@ pub fn asciiToUtf16LeStringLiteral(comptime ascii: []const u8) [ascii.len:0]u16 
     return utf16le;
 }
 
+pub fn assert(check: bool, comptime fmt: []const u8, args: anytype) void {
+    if (!check) {
+        if (@inComptime()) @compileLog(fmt, args);
+        unreachable;
+    }
+}
+
+pub inline fn enumFlags(comptime T: type, flags: anytype) T {
+    comptime assert(!@typeInfo(T).@"enum".is_exhaustive, "Only non-exhaustive enums can be flags.", .{});
+    var result: @typeInfo(T).@"enum".tag_type = 0;
+    inline for (flags) |flag| result |= @intFromEnum(@as(T, flag));
+    return @enumFromInt(result);
+}
+
 pub fn FnsToFnPtrs(comptime T: type) type {
     comptime {
         const decls = @typeInfo(T).@"struct".decls;

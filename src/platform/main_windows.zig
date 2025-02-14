@@ -173,6 +173,6 @@ fn entry() void {
 }
 
 pub export fn WinMainCRTStartup() callconv(.winapi) noreturn {
-    entry(); // :note this allows defers to work properly with noreturn.
+    entry();
     w.ExitProcess(0);
 }

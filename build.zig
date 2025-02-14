@@ -10,8 +10,14 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .single_threaded = true,
     });
-    // exe.subsystem = .Windows;
-    exe.entry = .{ .symbol_name = "WinMainCRTStartup" };
+    if (target.result.os.tag == .windows) {
+        if (optimize != .Debug) exe.subsystem = .Windows;
+        exe.entry = .{ .symbol_name = "WinMainCRTStartup" };
+    }
+    if (target.result.os.tag == .macos) {
+        exe.linkFramework("AppKit");
+        exe.entry = .{ .symbol_name = "__start" };
+    }
     b.installArtifact(exe);
 
     const run_step = b.addRunArtifact(exe);
