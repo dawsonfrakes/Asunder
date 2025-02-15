@@ -74,6 +74,62 @@ void opengl_platform_deinit() {
 void opengl_platform_present() {
   SwapBuffers(platform_hdc);
 }
+#elif OS_UNIX
+#include <GL/glx.h>
+
+#define X(RET, NAME, ...) RET (*NAME)(__VA_ARGS__);
+GL43_FUNCTIONS
+#undef X
+
+void opengl_platform_init() {
+  static int visual_attribs[] =
+  {
+    GLX_X_RENDERABLE    , True,
+    GLX_DRAWABLE_TYPE   , GLX_WINDOW_BIT,
+    GLX_RENDER_TYPE     , GLX_RGBA_BIT,
+    GLX_X_VISUAL_TYPE   , GLX_TRUE_COLOR,
+    GLX_RED_SIZE        , 8,
+    GLX_GREEN_SIZE      , 8,
+    GLX_BLUE_SIZE       , 8,
+    GLX_ALPHA_SIZE      , 8,
+    GLX_DEPTH_SIZE      , 24,
+    GLX_STENCIL_SIZE    , 8,
+    GLX_DOUBLEBUFFER    , True,
+    //GLX_SAMPLE_BUFFERS  , 1,
+    //GLX_SAMPLES         , 4,
+    None
+  };
+
+  int fbcount;
+  GLXFBConfig* fbc = glXChooseFBConfig(display, DefaultScreen(display), visual_attribs, &fbcount);
+
+  glXCreateContextAttribsARBProc glXCreateContextAttribsARB = 0;
+  glXCreateContextAttribsARB = (glXCreateContextAttribsARBProc)
+  glXGetProcAddressARB( (const GLubyte *) "glXCreateContextAttribsARB" );
+  int context_attribs[] =
+  {
+    GLX_CONTEXT_MAJOR_VERSION_ARB, 4,
+    GLX_CONTEXT_MINOR_VERSION_ARB, 6,
+    //GLX_CONTEXT_FLAGS_ARB        , GLX_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
+    None
+  };
+
+ctx = glXCreateContextAttribsARB( display, bestFbc, 0,
+                                  True, context_attribs );
+
+glXMakeCurrent( display, win, ctx );
+
+}
+
+void opengl_platform_deinit() {
+  glXDestroyContext( display, ctx );
+
+}
+
+void opengl_platform_present() {
+  glXSwapBuffers ( display, win );
+
+}
 #endif
 
 void opengl_debug_callback(u32 source, u32 type, u32 id, u32 severity, u32 length, char const* message, void const* param) {

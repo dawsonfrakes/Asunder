@@ -10,6 +10,20 @@
 #define OS_WINDOWS 0
 #endif
 
+#if defined(__linux__)
+#define OS_LINUX 1
+#else
+#define OS_LINUX 0
+#endif
+
+#if defined(__OpenBSD__)
+#define OS_OPENBSD 1
+#else
+#define OS_OPENBSD 0
+#endif
+
+#define OS_UNIX (OS_LINUX | OS_OPENBSD)
+
 #define null nullptr
 #define fallthrough do {} while (0)
 #define unreachable do *(cast(volatile u8*) 0) = 0; while (0)
