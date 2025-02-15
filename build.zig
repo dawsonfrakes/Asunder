@@ -10,13 +10,20 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .single_threaded = true,
     });
-    if (target.result.os.tag == .windows) {
-        if (optimize != .Debug) exe.subsystem = .Windows;
-        exe.entry = .{ .symbol_name = "WinMainCRTStartup" };
-    }
-    if (target.result.os.tag == .macos) {
-        exe.linkFramework("AppKit");
-        exe.entry = .{ .symbol_name = "__start" };
+    switch (target.result.os.tag) {
+        .windows => {
+            if (optimize != .Debug) exe.subsystem = .Windows;
+            exe.entry = .{ .symbol_name = "WinMainCRTStartup" };
+        },
+        .macos => {
+            exe.linkFramework("AppKit");
+            exe.entry = .{ .symbol_name = "__start" };
+        },
+        .linux, .freebsd, .openbsd, .netbsd, .dragonfly => {
+            exe.linkLibC();
+            exe.linkSystemLibrary("X11");
+        },
+        else => {},
     }
     b.installArtifact(exe);
 

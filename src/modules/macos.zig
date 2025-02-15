@@ -1,5 +1,5 @@
 pub const libSystem = struct {
-    pub extern "System" fn exit(status: c_int) callconv(.c) noreturn;
+    pub extern "System" fn exit(status: c_int) noreturn;
 };
 
 pub const libobjc = struct {
@@ -22,9 +22,9 @@ pub const libobjc = struct {
     pub const objc_Class = *opaque {};
     pub const objc_SEL = *opaque {};
 
-    pub extern "objc" fn objc_msgSend() callconv(.c) void;
-    pub extern "objc" fn objc_getClass(name: ?[*:0]const u8) callconv(.c) ?objc_Class;
-    pub extern "objc" fn sel_getUid(name: ?[*:0]const u8) callconv(.c) ?objc_SEL;
+    pub extern "objc" fn objc_msgSend() void;
+    pub extern "objc" fn objc_getClass(name: ?[*:0]const u8) ?objc_Class;
+    pub extern "objc" fn sel_getUid(name: ?[*:0]const u8) ?objc_SEL;
 };
 
 pub const fwCoreFoundation = struct {

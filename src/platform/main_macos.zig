@@ -34,7 +34,7 @@ fn entry() void {
     app.run();
 }
 
-pub export fn _start() callconv(.c) noreturn {
+pub export fn _start() noreturn {
     entry();
     m.exit(0);
 }
