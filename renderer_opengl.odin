@@ -78,6 +78,9 @@ OpenGLRectVertex :: struct {
 }
 OpenGLRectInstance :: struct {
 	offset: [2]f32,
+	scale: [2]f32,
+	texcoords: [2][2]f32,
+	color: [4]f32,
 }
 
 opengl_rect_vertices :: []OpenGLRectVertex{
@@ -117,9 +120,17 @@ opengl_init :: proc "contextless" () {
 
 		layout(location = 0) in vec2 a_position;
 		layout(location = 1) in vec2 i_offset;
+		layout(location = 2) in vec2 i_scale;
+		layout(location = 3) in vec4 i_texcoords;
+		layout(location = 4) in vec4 i_color;
+
+		layout(location = 3) out vec2 f_texcoord;
+		layout(location = 4) out vec4 f_color;
 
 		void main() {
-			gl_Position = vec4(a_position + i_offset, 0.0, 1.0);
+			gl_Position = vec4(a_position * i_scale + i_offset, 0.0, 1.0);
+			f_color = i_color;
+			f_texcoord = vec2(mix(i_texcoords.x, i_texcoords.z, float((gl_VertexID + 1) / 2 == 1)), mix(i_texcoords.y, i_texcoords.w, float(gl_VertexID / 2 == 1)));
 		}`
 		vsrcs := []cstring{vsrc}
 		gl.ShaderSource(vshader, cast(i32) len(vsrcs), raw_data(vsrcs), nil)
@@ -129,10 +140,13 @@ opengl_init :: proc "contextless" () {
 		defer gl.DeleteShader(fshader)
 		fsrc : cstring = `#version 450
 
+		layout(location = 3) in vec2 f_texcoord;
+		layout(location = 4) in vec4 f_color;
+
 		layout(location = 0) out vec4 color;
 
 		void main() {
-			color = vec4(1.0, 0.0, 1.0, 1.0);
+			color = vec4(f_texcoord, 0.0, 1.0) * f_color;
 		}`
 		fsrcs := []cstring{fsrc}
 		gl.ShaderSource(fshader, cast(i32) len(fsrcs), raw_data(fsrcs), nil)
@@ -170,6 +184,21 @@ opengl_init :: proc "contextless" () {
 		gl.EnableVertexArrayAttrib(opengl_rect_vao, offset_attrib)
 		gl.VertexArrayAttribBinding(opengl_rect_vao, offset_attrib, ibo_binding)
 		gl.VertexArrayAttribFormat(opengl_rect_vao, offset_attrib, 2, gl.FLOAT, false, cast(u32) offset_of(OpenGLRectInstance, offset))
+
+		scale_attrib :: 2
+		gl.EnableVertexArrayAttrib(opengl_rect_vao, scale_attrib)
+		gl.VertexArrayAttribBinding(opengl_rect_vao, scale_attrib, ibo_binding)
+		gl.VertexArrayAttribFormat(opengl_rect_vao, scale_attrib, 2, gl.FLOAT, false, cast(u32) offset_of(OpenGLRectInstance, scale))
+
+		texcoords_attrib :: 3
+		gl.EnableVertexArrayAttrib(opengl_rect_vao, texcoords_attrib)
+		gl.VertexArrayAttribBinding(opengl_rect_vao, texcoords_attrib, ibo_binding)
+		gl.VertexArrayAttribFormat(opengl_rect_vao, texcoords_attrib, 4, gl.FLOAT, false, cast(u32) offset_of(OpenGLRectInstance, texcoords))
+
+		color_attrib :: 4
+		gl.EnableVertexArrayAttrib(opengl_rect_vao, color_attrib)
+		gl.VertexArrayAttribBinding(opengl_rect_vao, color_attrib, ibo_binding)
+		gl.VertexArrayAttribFormat(opengl_rect_vao, color_attrib, 4, gl.FLOAT, false, cast(u32) offset_of(OpenGLRectInstance, color))
 	}
 }
 
@@ -204,9 +233,6 @@ opengl_present :: proc "contextless" () {
 
 	gl.Viewport(0, 0, w, h)
 
-	gl.ClearNamedFramebufferfv(opengl_main_fbo, gl.COLOR, 0, raw_data([]f32{0.6, 0.2, 0.2, 1.0}))
-	gl.ClearNamedFramebufferfv(opengl_main_fbo, gl.DEPTH, 0, raw_data([]f32{0.0}))
-
 	gl.BindFramebuffer(gl.FRAMEBUFFER, opengl_main_fbo)
 
 	instance_count := len(opengl_rect_instances)
@@ -224,6 +250,22 @@ opengl_present :: proc "contextless" () {
 	opengl_platform_present()
 }
 
-opengl_rect :: proc(offset: [2]f32, scale: [2]f32, color: [4]f32) {
-	append(&opengl_rect_instances, OpenGLRectInstance{offset = offset})
+opengl_clear :: proc(color: [4]f32, depth: f32) {
+	color, depth := color, depth
+	gl.ClearNamedFramebufferfv(opengl_main_fbo, gl.COLOR, 0, raw_data(color[:]))
+	gl.ClearNamedFramebufferfv(opengl_main_fbo, gl.DEPTH, 0, &depth)
+}
+
+opengl_rect :: proc(position: [2]f32, size: [2]f32, texcoords: [2][2]f32, color: [4]f32, rotation: f32, texture_index: u32) {
+	divisor := [2]f32{
+		cast(f32) max(1, platform_width - 1),
+		cast(f32) max(1, platform_height - 1),
+	}
+	append(&opengl_rect_instances, OpenGLRectInstance{
+		offset = position / divisor * 2.0 - 1.0,
+		scale = size / divisor * 2.0,
+		texcoords = texcoords,
+		color = color,
+	})
+	// :todo rotation, texture_index
 }

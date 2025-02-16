@@ -1,5 +1,8 @@
 package main
 
+import "game"
+import "base:intrinsics"
+
 Render_API :: enum {
 	NONE = 0,
 	OPENGL = 1,
@@ -12,6 +15,8 @@ Renderer :: struct {
 	deinit: proc "contextless" (),
 	resize: proc "contextless" (),
 	present: proc "contextless" (),
+	clear: proc(color: [4]f32, depth: f32),
+	rect: proc(position: [2]f32, size: [2]f32, texcoords: [2][2]f32, color: [4]f32, rotation: f32, texture_index: u32),
 }
 
 when RENDER_API == .OPENGL {
@@ -20,6 +25,8 @@ when RENDER_API == .OPENGL {
 		deinit = opengl_deinit,
 		resize = opengl_resize,
 		present = opengl_present,
+		clear = opengl_clear,
+		rect = opengl_rect,
 	}
 }
 
@@ -154,8 +161,10 @@ main :: proc() {
 			}
 		}
 
-		opengl_rect({-0.5, -0.5}, {1.0, 1.0}, {1.0, 0.0, 1.0, 1.0})
-		opengl_rect({+0.5, +0.5}, {1.0, 1.0}, {1.0, 0.0, 1.0, 1.0})
+		game_renderer: game.Renderer
+		game_renderer.clear = renderer.clear
+		game_renderer.rect = renderer.rect
+		game.update_and_render(&game_renderer)
 
 		renderer.present()
 
