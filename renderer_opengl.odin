@@ -63,6 +63,10 @@ when ODIN_OS == .Windows {
 
 		SwapBuffers(platform_hdc)
 	}
+} else {
+	opengl_platform_init :: proc "contextless" () {}
+	opengl_platform_deinit :: proc "contextless" () {}
+	opengl_platform_present :: proc "contextless" () {}
 }
 
 opengl_main_fbo: u32
