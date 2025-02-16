@@ -154,6 +154,9 @@ main :: proc() {
 			}
 		}
 
+		opengl_rect({-0.5, -0.5}, {1.0, 1.0}, {1.0, 0.0, 1.0, 1.0})
+		opengl_rect({+0.5, +0.5}, {1.0, 1.0}, {1.0, 0.0, 1.0, 1.0})
+
 		renderer.present()
 
 		if sleep_is_granular {

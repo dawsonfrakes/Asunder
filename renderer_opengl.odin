@@ -90,6 +90,8 @@ opengl_rect_elements :: []OpenGLRectElement{
 	0, 1, 2, 2, 3, 0,
 }
 
+opengl_rect_instances: [dynamic]OpenGLRectInstance
+
 opengl_main_fbo: u32
 opengl_main_fbo_color0: u32
 opengl_main_fbo_depth: u32
@@ -113,10 +115,11 @@ opengl_init :: proc "contextless" () {
 		defer gl.DeleteShader(vshader)
 		vsrc : cstring = `#version 450
 
-		layout(location = 0) in vec3 a_position;
+		layout(location = 0) in vec2 a_position;
+		layout(location = 1) in vec2 i_offset;
 
 		void main() {
-			gl_Position = vec4(a_position, 1.0);
+			gl_Position = vec4(a_position + i_offset, 0.0, 1.0);
 		}`
 		vsrcs := []cstring{vsrc}
 		gl.ShaderSource(vshader, cast(i32) len(vsrcs), raw_data(vsrcs), nil)
@@ -162,6 +165,11 @@ opengl_init :: proc "contextless" () {
 		gl.EnableVertexArrayAttrib(opengl_rect_vao, position_attrib)
 		gl.VertexArrayAttribBinding(opengl_rect_vao, position_attrib, vbo_binding)
 		gl.VertexArrayAttribFormat(opengl_rect_vao, position_attrib, 2, gl.FLOAT, false, cast(u32) offset_of(OpenGLRectVertex, position))
+
+		offset_attrib :: 1
+		gl.EnableVertexArrayAttrib(opengl_rect_vao, offset_attrib)
+		gl.VertexArrayAttribBinding(opengl_rect_vao, offset_attrib, ibo_binding)
+		gl.VertexArrayAttribFormat(opengl_rect_vao, offset_attrib, 2, gl.FLOAT, false, cast(u32) offset_of(OpenGLRectInstance, offset))
 	}
 }
 
@@ -201,13 +209,21 @@ opengl_present :: proc "contextless" () {
 
 	gl.BindFramebuffer(gl.FRAMEBUFFER, opengl_main_fbo)
 
+	instance_count := len(opengl_rect_instances)
+	gl.NamedBufferData(opengl_rect_ibo, instance_count * size_of(OpenGLRectInstance), raw_data(opengl_rect_instances), gl.STREAM_DRAW)
+	clear(&opengl_rect_instances)
+
 	gl.UseProgram(opengl_rect_shader)
 	gl.BindVertexArray(opengl_rect_vao)
-	gl.DrawElementsInstancedBaseVertexBaseInstance(gl.TRIANGLES, cast(i32) len(opengl_rect_elements), gl.UNSIGNED_BYTE, nil, 1, 0, 0)
+	gl.DrawElementsInstancedBaseVertexBaseInstance(gl.TRIANGLES, cast(i32) len(opengl_rect_elements), gl.UNSIGNED_BYTE, nil, cast(i32) instance_count, 0, 0)
 
 	gl.BlitNamedFramebuffer(opengl_main_fbo, 0,
 		0, 0, w, h,
 		0, 0, w, h,
 		gl.COLOR_BUFFER_BIT, gl.NEAREST)
 	opengl_platform_present()
+}
+
+opengl_rect :: proc(offset: [2]f32, scale: [2]f32, color: [4]f32) {
+	append(&opengl_rect_instances, OpenGLRectInstance{offset = offset})
 }
