@@ -24,3 +24,4 @@ OPTIONALS
 - Open Source
 - Fully streamed development
 - Intensely moddable
+- Compatible with every C99 compiler
