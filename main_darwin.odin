@@ -13,10 +13,15 @@ Application_setWindowsMenu :: proc "c" (self: ^NS.Application, menu: ^NS.Menu) -
 Window_center :: proc "c" (self: ^NS.Window) {
   intrinsics.objc_send(nil, self, "center")
 }
+View_frame :: proc "c" (self: ^NS.View) -> NS.Rect {
+  return intrinsics.objc_send(NS.Rect, self, "frame")
+}
 
 platform_app: ^NS.Application
 platform_window: ^NS.Window
 platform_running := true
+platform_width: int = 600
+platform_height: int = 400
 
 main :: proc() {
   NSString :: proc(s: string) -> ^NS.String {
@@ -53,13 +58,19 @@ main :: proc() {
 
   Application_setWindowsMenu(platform_app, windowsmenu)
 
-  platform_window = NS.Window.alloc()->initWithContentRect({{0, 0}, {600, 400}}, {.Titled} | {.Closable} | {.Miniaturizable} | {.Resizable}, .Buffered, false)
+  platform_window = NS.Window.alloc()->initWithContentRect({{0, 0}, {cast(NS.Float) platform_width, cast(NS.Float) platform_height}}, {.Titled} | {.Closable} | {.Miniaturizable} | {.Resizable}, .Buffered, false)
 
   windowWillClose :: proc(notification: ^NS.Notification) {
     platform_running = false
   }
 
-  window_delegate := NS.window_delegate_register_and_alloc({windowWillClose=windowWillClose}, "AsunderWindowDelegate", nil)
+  windowDidResize :: proc(notification: ^NS.Notification) {
+    size := View_frame(platform_window->contentView()).size
+    platform_width = cast(int) size.width
+    platform_height = cast(int) size.height
+  }
+
+  window_delegate := NS.window_delegate_register_and_alloc({windowWillClose=windowWillClose, windowDidResize=windowDidResize}, "AsunderWindowDelegate", nil)
   platform_window->setDelegate(window_delegate)
 
   platform_window->setTitle(NSString("Asunder"))
