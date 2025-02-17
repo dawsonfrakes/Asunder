@@ -4,6 +4,7 @@ package main
 
 import gl "basic/opengl"
 import "basic/windows"
+import X "basic/x11"
 
 when ODIN_OS == .Windows {
 	WGL_CONTEXT_MAJOR_VERSION_ARB :: 0x2091
@@ -64,7 +65,25 @@ when ODIN_OS == .Windows {
 		windows.SwapBuffers(platform_hdc)
 	}
 } else {
-	#assert(false, "Implementation needed.")
+  //opengl_ctx: X.GLXContext
+
+	opengl_platform_init :: proc "contextless" () {
+    using X
+		/*opengl_ctx = glXCreateContext(platform_display)
+		glXMakeCurrent(platform_display, platform_window, temp_ctx)
+
+		gl.load_1_0(glXGetProcAddress)
+		gl.load_4_5(glXGetProcAddress)*/
+	}
+
+	opengl_platform_deinit :: proc "contextless" () {
+		//if opengl_ctx != nil do X.glXDeleteContext(platform_display, opengl_ctx)
+		//opengl_ctx = nil
+	}
+
+	opengl_platform_present :: proc "contextless" () {
+    //X.glXSwapBuffers(platform_display, platform_window)
+	}
 }
 
 opengl_main_fbo: u32
