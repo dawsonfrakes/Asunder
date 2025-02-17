@@ -55,8 +55,8 @@
 #define zero(X) memset((X), 0, size_of(*(X)))
 #define true (cast(bool) 1)
 #define false (cast(bool) 0)
-#define null (cast(void*) 0)
-#define fallthrough (cast(void) 0)
+#define nil (cast(void*) 0)
+#define fall_through (cast(void) 0)
 #define unreachable do *((volatile u8*) 0) = 0; while (0)
 
 #if COMPILER_TCC || COMPILER_GCC || COMPILER_CLANG
@@ -89,6 +89,8 @@ typedef u32 b32;
 typedef float f32;
 typedef double f64;
 
+#if !COMPILER_CLANG
 void* memset(void*, s32, u64);
 void* memcpy(void*, void*, u64);
 void* memmove(void*, void*, u64);
+#endif

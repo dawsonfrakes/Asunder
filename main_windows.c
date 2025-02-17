@@ -16,7 +16,7 @@ s32 platform_height;
 #endif
 
 void update_cursor_clip(void) {
-	ClipCursor(null);
+	ClipCursor(nil);
 }
 
 void clear_held_keys(void) {
@@ -39,7 +39,7 @@ void toggle_fullscreen(void) {
 	} else {
 		SetWindowLongPtrW(platform_hwnd, GWL_STYLE, style | WS_OVERLAPPEDWINDOW);
 		SetWindowPlacement(platform_hwnd, &save_placement);
-		SetWindowPos(platform_hwnd, null, 0, 0, 0, 0, SWP_NOMOVE |
+		SetWindowPos(platform_hwnd, nil, 0, 0, 0, 0, SWP_NOMOVE |
 			SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
 	}
 }
@@ -47,7 +47,7 @@ void toggle_fullscreen(void) {
 s64 WINAPI window_proc(HWND hwnd, u32 message, u64 wParam, s64 lParam) {
 	switch (message) {
 		case WM_PAINT:
-			ValidateRect(hwnd, null);
+			ValidateRect(hwnd, nil);
 			return 0;
 		case WM_ERASEBKGND:
 			return 1;
@@ -83,14 +83,14 @@ s64 WINAPI window_proc(HWND hwnd, u32 message, u64 wParam, s64 lParam) {
 			return 0;
 		case WM_SYSCOMMAND:
 			if (wParam == SC_KEYMENU) return 0;
-			fallthrough;
+			fall_through;
 		default:
 			return DefWindowProcW(hwnd, message, wParam, lParam);
 	}
 }
 
 noreturn_t WINAPI WinMainCRTStartup(void) {
-	platform_hinstance = GetModuleHandleW(null);
+	platform_hinstance = GetModuleHandleW(nil);
 
 	WSADATA wsadata;
 	bool networking_supported = WSAStartup(0x202, &wsadata);
@@ -104,23 +104,23 @@ noreturn_t WINAPI WinMainCRTStartup(void) {
 	wndclass.style = CS_OWNDC;
 	wndclass.lpfnWndProc = window_proc;
 	wndclass.hInstance = platform_hinstance;
-	wndclass.hIcon = LoadIconW(null, IDI_WARNING);
-	wndclass.hCursor = LoadCursorW(null, IDC_CROSS);
+	wndclass.hIcon = LoadIconW(nil, IDI_WARNING);
+	wndclass.hCursor = LoadCursorW(nil, IDC_CROSS);
 	wndclass.lpszClassName = L"A";
 	RegisterClassExW(&wndclass);
 	CreateWindowExW(0, wndclass.lpszClassName, L"Asunder",
 		WS_OVERLAPPEDWINDOW | WS_VISIBLE,
 		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
-		null, null, platform_hinstance, null);
+		nil, nil, platform_hinstance, nil);
 
 	for (;;) {
 		MSG msg;
-		while (PeekMessageW(&msg, null, 0, 0, PM_REMOVE)) {
+		while (PeekMessageW(&msg, nil, 0, 0, PM_REMOVE)) {
 			TranslateMessage(&msg);
 			switch (msg.message) {
-				case WM_KEYDOWN: fallthrough;
-				case WM_KEYUP: fallthrough;
-				case WM_SYSKEYDOWN: fallthrough;
+				case WM_KEYDOWN: fall_through;
+				case WM_KEYUP: fall_through;
+				case WM_SYSKEYDOWN: fall_through;
 				case WM_SYSKEYUP: {
 					bool pressed = (msg.lParam & (1 << 31)) == 0;
 					bool repeat = pressed && (msg.lParam & (1 << 30)) != 0;
