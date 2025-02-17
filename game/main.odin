@@ -2,6 +2,7 @@ package game
 
 Rect_Texture :: enum u32 {
 	WHITE = 0,
+	FONT = 1,
 }
 
 Renderer :: struct {
@@ -21,5 +22,5 @@ update_and_render :: proc(renderer: ^Renderer) {
 	renderer.clear({0.6, 0.2, 0.2, 1.0}, 0.0)
 	rect(renderer, {500, 500}, {250, 250}, {1.0, 0.0, 0.0, 1.0})
 	trect(renderer, .WHITE, {600, 600}, {250, 250})
-	trect(renderer, .WHITE, {800, 800}, {250, 250})
+	trect(renderer, .FONT, {800, 800}, {250, 250})
 }

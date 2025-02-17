@@ -1,7 +1,10 @@
 package main
 
+import "base:runtime"
 import "core:sys/windows"
+import "vendor:stb/image"
 import gl "vendor:OpenGL"
+import "game"
 
 when ODIN_OS == .Windows {
 	opengl32: windows.HMODULE
@@ -51,6 +54,7 @@ when ODIN_OS == .Windows {
 		gl.load_1_1(load_legacy)
 		gl.load_2_0(load_modern)
 		gl.load_3_0(load_modern)
+		gl.load_4_1(load_modern)
 		gl.load_4_2(load_modern)
 		gl.load_4_5(load_modern)
 	}
@@ -81,6 +85,7 @@ OpenGLRectInstance :: struct {
 	scale: [2]f32,
 	texcoords: [2][2]f32,
 	color: [4]f32,
+	texture_index: u32,
 }
 
 opengl_rect_vertices :: []OpenGLRectVertex{
@@ -94,6 +99,8 @@ opengl_rect_elements :: []OpenGLRectElement{
 }
 
 opengl_rect_instances: [dynamic]OpenGLRectInstance
+
+opengl_textures: [game.Rect_Texture]u32
 
 opengl_main_fbo: u32
 opengl_main_fbo_color0: u32
@@ -123,14 +130,17 @@ opengl_init :: proc "contextless" () {
 		layout(location = 2) in vec2 i_scale;
 		layout(location = 3) in vec4 i_texcoords;
 		layout(location = 4) in vec4 i_color;
+		layout(location = 5) in uint i_texture_index;
 
 		layout(location = 3) out vec2 f_texcoord;
 		layout(location = 4) out vec4 f_color;
+		layout(location = 5) out flat uint f_texture_index;
 
 		void main() {
 			gl_Position = vec4(a_position * i_scale + i_offset, 0.0, 1.0);
 			f_color = i_color;
 			f_texcoord = vec2(mix(i_texcoords.x, i_texcoords.z, float((gl_VertexID + 1) / 2 == 1)), mix(i_texcoords.y, i_texcoords.w, float(gl_VertexID / 2 == 1)));
+			f_texture_index = i_texture_index;
 		}`
 		vsrcs := []cstring{vsrc}
 		gl.ShaderSource(vshader, cast(i32) len(vsrcs), raw_data(vsrcs), nil)
@@ -142,11 +152,14 @@ opengl_init :: proc "contextless" () {
 
 		layout(location = 3) in vec2 f_texcoord;
 		layout(location = 4) in vec4 f_color;
+		layout(location = 5) in flat uint f_texture_index;
 
 		layout(location = 0) out vec4 color;
 
+		layout(location = 0) uniform sampler2D u_textures[32];
+
 		void main() {
-			color = vec4(f_texcoord, 0.0, 1.0) * f_color;
+			color = texture(u_textures[f_texture_index], f_texcoord) * f_color;
 		}`
 		fsrcs := []cstring{fsrc}
 		gl.ShaderSource(fshader, cast(i32) len(fsrcs), raw_data(fsrcs), nil)
@@ -158,6 +171,8 @@ opengl_init :: proc "contextless" () {
 		gl.LinkProgram(opengl_rect_shader)
 		gl.DetachShader(opengl_rect_shader, fshader)
 		gl.DetachShader(opengl_rect_shader, vshader)
+
+		for i in 0..<32 do gl.ProgramUniform1i(opengl_rect_shader, cast(i32) i, cast(i32) i)
 	}
 
 	{
@@ -199,6 +214,30 @@ opengl_init :: proc "contextless" () {
 		gl.EnableVertexArrayAttrib(opengl_rect_vao, color_attrib)
 		gl.VertexArrayAttribBinding(opengl_rect_vao, color_attrib, ibo_binding)
 		gl.VertexArrayAttribFormat(opengl_rect_vao, color_attrib, 4, gl.FLOAT, false, cast(u32) offset_of(OpenGLRectInstance, color))
+
+		texture_index_attrib :: 5
+		gl.EnableVertexArrayAttrib(opengl_rect_vao, texture_index_attrib)
+		gl.VertexArrayAttribBinding(opengl_rect_vao, texture_index_attrib, ibo_binding)
+		gl.VertexArrayAttribIFormat(opengl_rect_vao, texture_index_attrib, 1, gl.UNSIGNED_INT, cast(u32) offset_of(OpenGLRectInstance, texture_index))
+	}
+
+	{
+		gl.CreateTextures(gl.TEXTURE_2D, 1, &opengl_textures[.WHITE]);
+		gl.TextureStorage2D(opengl_textures[.WHITE], 1, gl.RGBA8, 1, 1)
+		white_pixel: u32 = 0xFFFFFFFF
+		gl.TextureSubImage2D(opengl_textures[.WHITE], 0, 0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, &white_pixel)
+	}
+
+	{
+		context = runtime.default_context()
+		x, y, channels: i32 = ---, ---, ---
+		image.set_flip_vertically_on_load(1)
+		pix := image.load("game/res/textures/inconsolata.png", &x, &y, &channels, 4)
+		defer image.image_free(pix)
+
+		gl.CreateTextures(gl.TEXTURE_2D, 1, &opengl_textures[.FONT]);
+		gl.TextureStorage2D(opengl_textures[.FONT], 1, gl.RGBA8, x, y)
+		gl.TextureSubImage2D(opengl_textures[.FONT], 0, 0, 0, x, y, gl.RGBA, gl.UNSIGNED_BYTE, pix)
 	}
 }
 
@@ -239,6 +278,8 @@ opengl_present :: proc "contextless" () {
 	gl.NamedBufferData(opengl_rect_ibo, instance_count * size_of(OpenGLRectInstance), raw_data(opengl_rect_instances), gl.STREAM_DRAW)
 	clear(&opengl_rect_instances)
 
+	gl.BindTextureUnit(0, opengl_textures[.WHITE])
+	gl.BindTextureUnit(1, opengl_textures[.FONT])
 	gl.UseProgram(opengl_rect_shader)
 	gl.BindVertexArray(opengl_rect_vao)
 	gl.DrawElementsInstancedBaseVertexBaseInstance(gl.TRIANGLES, cast(i32) len(opengl_rect_elements), gl.UNSIGNED_BYTE, nil, cast(i32) instance_count, 0, 0)
@@ -266,6 +307,7 @@ opengl_rect :: proc(position: [2]f32, size: [2]f32, texcoords: [2][2]f32, color:
 		scale = size / divisor * 2.0,
 		texcoords = texcoords,
 		color = color,
+		texture_index = texture_index,
 	})
-	// :todo rotation, texture_index
+	// :todo rotation
 }
