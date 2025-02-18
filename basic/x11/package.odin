@@ -7,7 +7,9 @@ InputOutput :: 1
 CWBackPixel :: 1 << 1
 CWEventMask :: 1 << 11
 StructureNotifyMask :: 1 << 17
+CreateNotify :: 16
 DestroyNotify :: 17
+ConfigureNotify :: 22
 ClientMessage :: 33
 
 Display :: struct {}
@@ -35,6 +37,21 @@ SetWindowAttributes :: struct {
 	colormap: Colormap,
 	cursor: Cursor,
 }
+ConfigureEvent :: struct {
+	type: i32,
+	serial: uintptr,
+	send_event: b32,
+	display: ^Display,
+	event: Window,
+	window: Window,
+	x: i32,
+	y: i32,
+	width: i32,
+	height: i32,
+	border_width: i32,
+	above: Window,
+	override_redirect: b32,
+}
 ClientMessageEvent :: struct {
 	type: i32,
 	serial: uintptr,
@@ -51,6 +68,7 @@ ClientMessageEvent :: struct {
 }
 Event :: struct #raw_union {
 	type: i32,
+	xconfigure: ConfigureEvent,
 	xclient: ClientMessageEvent,
 	pad: [24]int,
 }
@@ -70,4 +88,19 @@ foreign lib {
 	InternAtom :: proc(display: ^Display, name: cstring, only_if_exists: b32) -> Atom ---
 	SetWMProtocols :: proc(display: ^Display, window: Window, atoms: [^]Atom, count: i32) -> i32 ---
 	DestroyWindow :: proc(display: ^Display, window: Window) -> i32 ---
+}
+
+foreign import "system:GL"
+
+VisualInfo :: struct {}
+GLXContext :: ^struct {}
+
+@(link_prefix="glX")
+foreign GL {
+	ChooseVisual :: proc(display: ^Display, screen: Screen, attribs: [^]i32) -> ^VisualInfo ---
+	CreateContext :: proc(display: ^Display, vi: ^VisualInfo, share: GLXContext, direct: b32) -> GLXContext ---
+	MakeCurrent :: proc(display: ^Display, window: Window, ctx: GLXContext) -> b32 ---
+	SwapBuffers :: proc(display: ^Display, window: Window) ---
+	GetProcAddress :: proc(name: cstring) -> rawptr ---
+	DestroyContext :: proc(display: ^Display, ctx: GLXContext) ---
 }
