@@ -20,12 +20,14 @@ when RENDER_API == "OPENGL" {
 	renderer_resize :: opengl_resize
 	renderer_present :: opengl_present
 	renderer_clear :: opengl_clear
+	renderer_rect :: opengl_rect
 } else when RENDER_API == "NONE" {
 	renderer_init :: proc "contextless" () {}
 	renderer_deinit :: proc "contextless" () {}
 	renderer_resize :: proc "contextless" () {}
 	renderer_present :: proc "contextless" () {}
 	renderer_clear :: proc(color0: [4]f32, depth: f32) {}
+	renderer_rect :: proc(position: [3]f32, size: [2]f32, texcoords: [2][2]f32, texture: game.Rect_Texture, color: [4]f32, rotation: f32) {}
 } else do #panic("Invalid RENDER_API")
 
 main :: proc() {
@@ -185,6 +187,7 @@ main :: proc() {
 
 		renderer: game.Renderer
 		renderer.clear = renderer_clear
+		renderer.rect = renderer_rect
 		game.update_and_render(&renderer)
 
 		renderer_present()

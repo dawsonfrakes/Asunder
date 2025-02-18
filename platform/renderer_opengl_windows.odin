@@ -47,7 +47,9 @@ opengl_platform_init :: proc "contextless" () {
 	}
 
 	gl.load_1_0(get_legacy_proc)
+	gl.load_2_0(wglGetProcAddress)
 	gl.load_3_0(wglGetProcAddress)
+	gl.load_4_2(wglGetProcAddress)
 	gl.load_4_5(wglGetProcAddress)
 }
 
