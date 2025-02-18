@@ -114,7 +114,7 @@ opengl_init :: proc "contextless" () {
 		gl.TextureSubImage2D(opengl_rect_textures[.WHITE], 0, 0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, &white_pixel)
 
 		@static
-		font_bmp := #load("../assets/textures/font.bmp")
+		font_bmp := #load("../assets/textures/mikado.bmp")
 		pixels_offset := (cast(^u32) raw_data(font_bmp[0x0A:][:4]))^
 		pixels_width := (cast(^i32) raw_data(font_bmp[0x12:][:4]))^
 		pixels_height := (cast(^i32) raw_data(font_bmp[0x16:][:4]))^
@@ -123,7 +123,7 @@ opengl_init :: proc "contextless" () {
 
 		gl.CreateTextures(gl.TEXTURE_2D, 1, &opengl_rect_textures[.FONT])
 		gl.TextureStorage2D(opengl_rect_textures[.FONT], 1, gl.RGBA8, cast(u32) pixels_width, cast(u32) pixels_height)
-		gl.TextureSubImage2D(opengl_rect_textures[.FONT], 0, 0, 0, cast(u32) pixels_width, cast(u32) pixels_height, gl.RGB, gl.UNSIGNED_BYTE, raw_data(pixels))
+		gl.TextureSubImage2D(opengl_rect_textures[.FONT], 0, 0, 0, cast(u32) pixels_width, cast(u32) pixels_height, gl.BGRA, gl.UNSIGNED_BYTE, raw_data(pixels))
 	}
 
 	{
@@ -214,6 +214,8 @@ opengl_present :: proc "contextless" () {
 	gl.NamedBufferData(opengl_rect_ibo, cast(uintptr) rect_instance_count * size_of(OpenGL_Rect_Instance), raw_data(opengl_rect_instances[:]), gl.STREAM_DRAW)
 	defer clear(&opengl_rect_instances)
 
+	gl.Enable(gl.BLEND)
+	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 	gl.UseProgram(opengl_rect_shader)
 	for texture, index in opengl_rect_textures {
 		gl.BindTextureUnit(cast(u32) index, texture)

@@ -11,8 +11,9 @@ platform_hwnd: windows.HWND
 platform_hdc: windows.HDC
 platform_width: i32
 platform_height: i32
-platform_keys: bit_set[0..<128]
+platform_keys: [256]bool
 platform_mouse: [2]i16
+platform_lmb: bool
 
 when RENDER_API == "OPENGL" {
 	renderer_init :: opengl_init
@@ -161,10 +162,12 @@ main :: proc() {
 							if wParam == VK_RETURN && alt do toggle_fullscreen()
 							if wParam == VK_F11 do toggle_fullscreen()
 						}
-						if pressed do platform_keys |= {cast(int) cast(u8) wParam}
-						else do platform_keys &~= {cast(int) cast(u8) wParam}
+						platform_keys[cast(u8) wParam] = pressed
 						platform_key_transitions[cast(u8) wParam] += 1
 					}
+				case WM_LBUTTONDOWN: fallthrough
+				case WM_LBUTTONUP:
+					platform_lmb = message == WM_LBUTTONDOWN
 				case WM_MOUSEMOVE:
 					x := cast(i16) lParam
 					y := cast(i16) (lParam >> 16)
@@ -188,7 +191,11 @@ main :: proc() {
 		renderer: game.Renderer
 		renderer.clear = renderer_clear
 		renderer.rect = renderer_rect
-		game.update_and_render(&renderer)
+		input: game.Input
+		input.mouse = {cast(f32) platform_mouse.x, cast(f32) (platform_height - 1 - cast(i32) platform_mouse.y)}
+		input.lmb = platform_lmb
+		game.update_and_render(&renderer, &input)
+		if input.wants_quit do DestroyWindow(platform_hwnd)
 
 		renderer_present()
 

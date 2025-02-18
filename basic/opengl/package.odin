@@ -4,6 +4,10 @@ package opengl
 DEPTH_BUFFER_BIT :: 0x00000100
 COLOR_BUFFER_BIT :: 0x00004000
 TRIANGLES :: 0x0004
+SRC_ALPHA :: 0x0302
+ONE_MINUS_SRC_ALPHA :: 0x0303
+
+BLEND :: 0x0BE2
 TEXTURE_2D :: 0x0DE1
 UNSIGNED_BYTE :: 0x1401
 UNSIGNED_INT :: 0x1405
@@ -19,6 +23,7 @@ Disable: proc "c" (cap: u32)
 Clear: proc "c" (mask: u32)
 Viewport: proc "c" (x, y: i32, w, h: u32)
 GetIntegerv: proc "c" (name: u32, data: [^]i32)
+BlendFunc: proc "c" (sfactor, dfactor: u32)
 
 load_1_0 :: proc "contextless" (get_proc_addr: $T) {
 	Enable = cast(type_of(Enable)) get_proc_addr("glEnable")
@@ -26,6 +31,7 @@ load_1_0 :: proc "contextless" (get_proc_addr: $T) {
 	Clear = cast(type_of(Clear)) get_proc_addr("glClear")
 	Viewport = cast(type_of(Viewport)) get_proc_addr("glViewport")
 	GetIntegerv = cast(type_of(GetIntegerv)) get_proc_addr("glGetIntegerv")
+	BlendFunc = cast(type_of(BlendFunc)) get_proc_addr("glBlendFunc")
 }
 
 // 1.1
