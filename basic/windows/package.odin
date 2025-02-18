@@ -145,6 +145,32 @@ foreign user32 {
 	GetMonitorInfoW :: proc(hwnd: HWND, mi: ^MONITORINFO) -> i32 ---
 }
 
+foreign import "system:ws2_32.lib"
+
+WSADATA :: struct {
+	wVersion: u16,
+	wHighVersion: u16,
+	szDescription: [257]u8,
+	szSystemStatus: [129]u8,
+	iMaxSockets: u16,
+	iMaxUdpDg: u16,
+	lpVendorInfo: [^]u8,
+} when ODIN_ARCH == .i386 else struct {
+	wVersion: u16,
+	wHighVersion: u16,
+	iMaxSockets: u16,
+	iMaxUdpDg: u16,
+	lpVendorInfo: [^]u8,
+	szDescription: [257]u8,
+	szSystemStatus: [129]u8,
+}
+
+@(default_calling_convention = "std")
+foreign ws2_32 {
+	WSAStartup :: proc(version: u16, wsadata: ^WSADATA) -> i32 ---
+	WSACleanup :: proc() -> i32 ---
+}
+
 foreign import "system:gdi32.lib"
 
 PFD_DOUBLEBUFFER :: 0x00000001

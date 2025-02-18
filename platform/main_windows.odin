@@ -67,6 +67,10 @@ main :: proc() {
 
 	platform_hinstance = GetModuleHandleW(nil)
 
+	wsadata: WSADATA = ---
+	networking_supported := WSAStartup(0x202, &wsadata) == 0
+	defer if networking_supported do WSACleanup()
+
 	sleep_is_granular := timeBeginPeriod(1) == TIMERR_NOERROR
 
 	clock_frequency: i64 = ---
