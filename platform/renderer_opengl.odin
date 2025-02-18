@@ -25,3 +25,9 @@ opengl_present :: proc "contextless" () {
 
 	opengl_platform_present()
 }
+
+opengl_clear :: proc(color0: [4]f32, depth: f32) {
+	gl.ClearColor(color0.r, color0.g, color0.b, color0.a)
+	gl.ClearDepth(cast(f64) depth)
+	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+}

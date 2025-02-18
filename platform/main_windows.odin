@@ -1,6 +1,7 @@
 package main
 
 import "../basic/windows"
+import "../game"
 
 RENDER_API :: #config(RENDER_API, "OPENGL")
 
@@ -18,11 +19,13 @@ when RENDER_API == "OPENGL" {
 	renderer_deinit :: opengl_deinit
 	renderer_resize :: opengl_resize
 	renderer_present :: opengl_present
+	renderer_clear :: opengl_clear
 } else when RENDER_API == "NONE" {
 	renderer_init :: proc "contextless" () {}
 	renderer_deinit :: proc "contextless" () {}
 	renderer_resize :: proc "contextless" () {}
 	renderer_present :: proc "contextless" () {}
+	renderer_clear :: proc(color0: [4]f32, depth: f32) {}
 } else do #panic("Invalid RENDER_API")
 
 main :: proc() {
@@ -175,6 +178,10 @@ main :: proc() {
 		QueryPerformanceCounter(&clock_current)
 		delta := cast(f32) (clock_current - clock_previous) / cast(f32) clock_frequency
 		defer clock_previous = clock_current
+
+		renderer: game.Renderer
+		renderer.clear = renderer_clear
+		game.update_and_render(&renderer)
 
 		renderer_present()
 
