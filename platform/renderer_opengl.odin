@@ -4,20 +4,11 @@ package main
 
 import gl "../basic/opengl"
 import "../game"
-
-opengl_rect_instances: [dynamic]OpenGL_Rect_Instance
-opengl_window_divisor: [2]f32 = 1.0
-
-opengl_main_fbo: u32
-opengl_main_fbo_color0: u32
-opengl_main_fbo_depth: u32
-
-opengl_rect_shader: u32
-opengl_rect_vao: u32
-opengl_rect_vbo: u32
-opengl_rect_ebo: u32
-opengl_rect_ibo: u32
-opengl_rect_textures: [game.Rect_Texture]u32
+import "base:runtime"
+import "core:fmt"
+import "core:strings"
+import "core:strconv"
+import "core:os"
 
 OpenGL_Rect_Element :: u8
 OpenGL_Rect_Vertex :: struct {
@@ -32,6 +23,39 @@ OpenGL_Rect_Instance :: struct {
 	texture_index: u32,
 }
 
+OpenGL_Mesh_Element :: u32
+OpenGL_Mesh_Vertex :: struct {
+	position: [3]f32,
+	normal: [3]f32,
+	texcoord: [2]f32,
+	texture_index: u32,
+}
+OpenGL_Mesh_Instance :: struct {
+	world_transform: matrix[4, 4]f32,
+	local_transform: matrix[4, 4]f32,
+}
+
+OpenGL_Mesh :: struct {
+	vertices: []OpenGL_Mesh_Vertex,
+	elements: []OpenGL_Mesh_Element,
+	textures: [dynamic]u32,
+	ebo_offset: uintptr,
+	vbo_base_vertex: i32,
+}
+
+opengl_window_divisor: [2]f32 = 1.0
+
+opengl_main_fbo: u32
+opengl_main_fbo_color0: u32
+opengl_main_fbo_depth: u32
+
+opengl_rect_shader: u32
+opengl_rect_vao: u32
+opengl_rect_vbo: u32
+opengl_rect_ebo: u32
+opengl_rect_ibo: u32
+opengl_rect_textures: [game.Rect_Texture]u32
+opengl_rect_instances: [dynamic]OpenGL_Rect_Instance
 opengl_rect_vertices := [?]OpenGL_Rect_Vertex{
 	{position = {-0.5, -0.5}},
 	{position = {+0.5, -0.5}},
@@ -42,8 +66,18 @@ opengl_rect_elements := [?]OpenGL_Rect_Element{
 	0, 1, 2, 2, 3, 0,
 }
 
+opengl_mesh_shader: u32
+opengl_mesh_vao: u32
+opengl_mesh_vbo: u32
+opengl_mesh_ebo: u32
+opengl_mesh_ibo: u32
+opengl_meshes: [game.Mesh_Kind]OpenGL_Mesh
+opengl_mesh_instances: [game.Mesh_Kind][dynamic]OpenGL_Mesh_Instance
+
 opengl_init :: proc "contextless" () {
 	opengl_platform_init()
+
+	gl.ClipControl(gl.LOWER_LEFT, gl.ZERO_TO_ONE)
 
 	gl.CreateFramebuffers(1, &opengl_main_fbo)
 	gl.CreateRenderbuffers(1, &opengl_main_fbo_color0)
@@ -126,7 +160,7 @@ opengl_init :: proc "contextless" () {
 		gl.TextureSubImage2D(opengl_rect_textures[.FONT], 0, 0, 0, cast(u32) pixels_width, cast(u32) pixels_height, gl.BGRA, gl.UNSIGNED_BYTE, raw_data(pixels))
 	}
 
-	{
+	{ // rectangle buffers
 		gl.CreateBuffers(1, &opengl_rect_vbo)
 		gl.NamedBufferData(opengl_rect_vbo, len(opengl_rect_vertices) * size_of(OpenGL_Rect_Vertex), raw_data(opengl_rect_vertices[:]), gl.STATIC_DRAW)
 		gl.CreateBuffers(1, &opengl_rect_ebo)
@@ -176,6 +210,203 @@ opengl_init :: proc "contextless" () {
 		gl.VertexArrayAttribBinding(opengl_rect_vao, texture_index_attrib, ibo_binding)
 		gl.VertexArrayAttribIFormat(opengl_rect_vao, texture_index_attrib, 1, gl.UNSIGNED_INT, cast(u32) offset_of(OpenGL_Rect_Instance, texture_index))
 	}
+
+	{ // mesh shaders
+		vsrc: cstring = `#version 450
+
+		layout(location = 0) in vec3 a_position;
+		layout(location = 1) in vec3 a_normal;
+		layout(location = 2) in vec2 a_texcoord;
+		layout(location = 3) in uint a_texture_index;
+		layout(location = 4) in mat4 i_world_transform;
+		layout(location = 8) in mat4 i_local_transform;
+
+		layout(location = 1) out vec3 f_normal;
+		layout(location = 2) out vec2 f_texcoord;
+		layout(location = 3) flat out uint f_texture_index;
+		layout(location = 8) out mat4 f_local_transform;
+
+		void main() {
+			gl_Position = i_world_transform * vec4(a_position, 1.0);
+			f_normal = a_normal;
+			f_texcoord = a_texcoord;
+			f_texture_index = a_texture_index;
+			f_local_transform = i_local_transform;
+		}
+		`
+		vshader := gl.CreateShader(gl.VERTEX_SHADER)
+		defer gl.DeleteShader(vshader)
+		gl.ShaderSource(vshader, 1, &vsrc, nil)
+		gl.CompileShader(vshader)
+
+		fsrc: cstring = `#version 450
+
+		layout(location = 1) in vec3 f_normal;
+		layout(location = 2) in vec2 f_texcoord;
+		layout(location = 3) flat in uint f_texture_index;
+		layout(location = 8) in mat4 f_local_transform;
+
+		layout(location = 0) out vec4 color;
+
+		layout(location = 0) uniform sampler2D u_textures[32];
+
+		void main() {
+			color = texture(u_textures[f_texture_index], f_texcoord);
+		}
+		`
+		fshader := gl.CreateShader(gl.FRAGMENT_SHADER)
+		defer gl.DeleteShader(fshader)
+		gl.ShaderSource(fshader, 1, &fsrc, nil)
+		gl.CompileShader(fshader)
+
+		opengl_mesh_shader = gl.CreateProgram()
+		gl.AttachShader(opengl_mesh_shader, vshader)
+		gl.AttachShader(opengl_mesh_shader, fshader)
+		gl.LinkProgram(opengl_mesh_shader)
+		gl.DetachShader(opengl_mesh_shader, fshader)
+		gl.DetachShader(opengl_mesh_shader, vshader)
+
+		for i in 0..<32 {
+			gl.ProgramUniform1i(opengl_mesh_shader, cast(i32) i, cast(i32) i)
+		}
+	}
+
+	{ // mesh buffers
+		gl.CreateBuffers(1, &opengl_mesh_vbo)
+		gl.CreateBuffers(1, &opengl_mesh_ebo)
+		gl.CreateBuffers(1, &opengl_mesh_ibo)
+
+		models := [game.Mesh_Kind]string{
+			.CUBE = "assets/models/cube.obj",
+		}
+
+		context = runtime.default_context()
+
+		meshes_positions: [game.Mesh_Kind][dynamic][3]f32
+		meshes_normals: [game.Mesh_Kind][dynamic][3]f32
+		meshes_texcoords: [game.Mesh_Kind][dynamic][2]f32
+		meshes_faces: [game.Mesh_Kind][dynamic][3][3]u32
+		for &mesh, kind in opengl_meshes {
+			obj_data := os.read_entire_file(models[kind]) or_continue
+
+			for line in strings.split(string(obj_data), "\n") {
+				if len(line) < 2 do continue
+				switch line[0:2] {
+					case "v ":
+						position := strings.split(strings.trim(line[2:], " "), " ")
+						append(&meshes_positions[kind], [3]f32{cast(f32) strconv.atof(position[0]), cast(f32) strconv.atof(position[1]), cast(f32) strconv.atof(position[2])})
+					case "vn":
+						normal := strings.split(strings.trim(line[2:], " "), " ")
+						append(&meshes_normals[kind], [3]f32{cast(f32) strconv.atof(normal[0]), cast(f32) strconv.atof(normal[1]), cast(f32) strconv.atof(normal[2])})
+					case "vt":
+						texcoord := strings.split(strings.trim(line[2:], " "), " ")
+						append(&meshes_texcoords[kind], [2]f32{cast(f32) strconv.atof(texcoord[0]), cast(f32) strconv.atof(texcoord[1])})
+					case "f ":
+						faces := strings.split(strings.trim(line[2:], " "), " ")
+						face_a := strings.split(faces[0], "/")
+						face_b := strings.split(faces[1], "/")
+						face_c := strings.split(faces[2], "/")
+						va := cast(u32) (strconv.atoi(face_a[0]) - 1)
+						vta := cast(u32) (strconv.atoi(face_a[1]) - 1)
+						vna := cast(u32) (strconv.atoi(face_a[2]) - 1)
+						vb := cast(u32) (strconv.atoi(face_b[0]) - 1)
+						vtb := cast(u32) (strconv.atoi(face_b[1]) - 1)
+						vnb := cast(u32) (strconv.atoi(face_b[2]) - 1)
+						vc := cast(u32) (strconv.atoi(face_c[0]) - 1)
+						vtc := cast(u32) (strconv.atoi(face_c[1]) - 1)
+						vnc := cast(u32) (strconv.atoi(face_a[2]) - 1)
+						append(&meshes_faces[kind], [3][3]u32{{va, vta, vna}, {vb, vtb, vnb}, {vc, vtc, vnc}})
+				}
+			}
+		}
+
+		meshes_vertices: [game.Mesh_Kind][dynamic]OpenGL_Mesh_Vertex
+		meshes_elements: [game.Mesh_Kind][dynamic]OpenGL_Mesh_Element
+		element_index: OpenGL_Mesh_Element = 0
+		for &mesh, kind in opengl_meshes {
+			for face in meshes_faces[kind] {
+				for i in 0..<3 {
+					position := meshes_positions[kind][face[i][0]]
+					texcoord := meshes_texcoords[kind][face[i][1]]
+					normal := meshes_normals[kind][face[i][2]]
+					append(&meshes_vertices[kind], OpenGL_Mesh_Vertex{
+						position = position,
+						normal = normal,
+						texcoord = texcoord,
+						texture_index = 0,
+					})
+					append(&meshes_elements[kind], element_index)
+					element_index += 1
+				}
+			}
+
+			mesh.vertices = meshes_vertices[kind][:]
+			mesh.elements = meshes_elements[kind][:]
+		}
+
+		base_vertex: i32 = 0
+		elements_offset: uintptr = 0
+		for &mesh in opengl_meshes {
+			mesh.vbo_base_vertex = base_vertex
+			mesh.ebo_offset = elements_offset
+
+			elements_offset += cast(uintptr) (len(mesh.elements) * size_of(OpenGL_Mesh_Element))
+			base_vertex += cast(i32) len(mesh.vertices)
+		}
+		total_vertices_size := base_vertex * size_of(OpenGL_Mesh_Vertex)
+		total_elements_size := elements_offset
+
+		gl.NamedBufferData(opengl_mesh_vbo, cast(uintptr) total_vertices_size, nil, gl.STATIC_DRAW)
+		gl.NamedBufferData(opengl_mesh_ebo, total_elements_size, nil, gl.STATIC_DRAW)
+		gl.NamedBufferData(opengl_mesh_ibo, 1024 * size_of(OpenGL_Mesh_Instance), nil, gl.STREAM_DRAW)
+
+		for mesh in opengl_meshes {
+			gl.NamedBufferSubData(opengl_mesh_vbo, cast(int) mesh.vbo_base_vertex * size_of(OpenGL_Mesh_Vertex), cast(uintptr) len(mesh.vertices) * size_of(OpenGL_Mesh_Vertex), raw_data(mesh.vertices))
+			gl.NamedBufferSubData(opengl_mesh_ebo, cast(int) mesh.ebo_offset, cast(uintptr) len(mesh.elements) * size_of(OpenGL_Mesh_Element), raw_data(mesh.elements))
+		}
+
+		vbo_binding :: 0
+		ibo_binding :: 1
+		gl.CreateVertexArrays(1, &opengl_mesh_vao)
+		gl.VertexArrayElementBuffer(opengl_mesh_vao, opengl_mesh_ebo)
+		gl.VertexArrayVertexBuffer(opengl_mesh_vao, vbo_binding, opengl_mesh_vbo, 0, size_of(OpenGL_Mesh_Vertex))
+		gl.VertexArrayVertexBuffer(opengl_mesh_vao, ibo_binding, opengl_mesh_ibo, 0, size_of(OpenGL_Mesh_Instance))
+		gl.VertexArrayBindingDivisor(opengl_mesh_vao, ibo_binding, 1)
+
+		position_attrib :: 0
+		gl.EnableVertexArrayAttrib(opengl_mesh_vao, position_attrib)
+		gl.VertexArrayAttribBinding(opengl_mesh_vao, position_attrib, vbo_binding)
+		gl.VertexArrayAttribFormat(opengl_mesh_vao, position_attrib, 3, gl.FLOAT, false, cast(u32) offset_of(OpenGL_Mesh_Vertex, position))
+
+		normal_attrib :: 1
+		gl.EnableVertexArrayAttrib(opengl_mesh_vao, normal_attrib)
+		gl.VertexArrayAttribBinding(opengl_mesh_vao, normal_attrib, vbo_binding)
+		gl.VertexArrayAttribFormat(opengl_mesh_vao, normal_attrib, 3, gl.FLOAT, false, cast(u32) offset_of(OpenGL_Mesh_Vertex, normal))
+
+		texcoord_attrib :: 2
+		gl.EnableVertexArrayAttrib(opengl_mesh_vao, texcoord_attrib)
+		gl.VertexArrayAttribBinding(opengl_mesh_vao, texcoord_attrib, vbo_binding)
+		gl.VertexArrayAttribFormat(opengl_mesh_vao, texcoord_attrib, 2, gl.FLOAT, false, cast(u32) offset_of(OpenGL_Mesh_Vertex, texcoord))
+
+		texture_index_attrib :: 3
+		gl.EnableVertexArrayAttrib(opengl_mesh_vao, texture_index_attrib)
+		gl.VertexArrayAttribBinding(opengl_mesh_vao, texture_index_attrib, vbo_binding)
+		gl.VertexArrayAttribIFormat(opengl_mesh_vao, texture_index_attrib, 1, gl.UNSIGNED_INT, cast(u32) offset_of(OpenGL_Mesh_Vertex, texture_index))
+
+		world_transform_attrib :: 4
+		for i in 0..<4 {
+			gl.EnableVertexArrayAttrib(opengl_mesh_vao, cast(u32) (world_transform_attrib + i))
+			gl.VertexArrayAttribBinding(opengl_mesh_vao, cast(u32) (world_transform_attrib + i), ibo_binding)
+			gl.VertexArrayAttribFormat(opengl_mesh_vao, cast(u32) (world_transform_attrib + i), 4, gl.FLOAT, false, cast(u32) (offset_of(OpenGL_Mesh_Instance, world_transform) + cast(uintptr) i * size_of([4]f32)))
+		}
+
+		local_transform_attrib :: 8
+		for i in 0..<4 {
+			gl.EnableVertexArrayAttrib(opengl_mesh_vao, cast(u32) (local_transform_attrib + i))
+			gl.VertexArrayAttribBinding(opengl_mesh_vao, cast(u32) (local_transform_attrib + i), ibo_binding)
+			gl.VertexArrayAttribFormat(opengl_mesh_vao, cast(u32) (local_transform_attrib + i), 4, gl.FLOAT, false, cast(u32) (offset_of(OpenGL_Mesh_Instance, local_transform) + cast(uintptr) i * size_of([4]f32)))
+		}
+	}
 }
 
 opengl_deinit :: proc "contextless" () {
@@ -210,6 +441,29 @@ opengl_present :: proc "contextless" () {
 
 	gl.Viewport(0, 0, cast(u32) platform_width, cast(u32) platform_height)
 
+	gl.Enable(gl.DEPTH)
+	gl.DepthFunc(gl.GEQUAL)
+	gl.Enable(gl.CULL_FACE)
+	gl.Disable(gl.BLEND)
+	gl.UseProgram(opengl_mesh_shader)
+	gl.BindVertexArray(opengl_mesh_vao)
+	opengl_mesh_instance_count := 0
+	for mesh, kind in opengl_meshes {
+		for texture, index in mesh.textures {
+			gl.BindTextureUnit(cast(u32) index, texture)
+		}
+		gl.NamedBufferSubData(opengl_mesh_ibo, opengl_mesh_instance_count * size_of(OpenGL_Mesh_Instance), cast(uintptr) (len(opengl_mesh_instances[kind]) * size_of(OpenGL_Mesh_Instance)), raw_data(opengl_mesh_instances[kind]))
+		defer clear(&opengl_mesh_instances[kind])
+		gl.DrawElementsInstancedBaseVertexBaseInstance(
+			gl.TRIANGLES,
+			cast(u32) len(mesh.elements),
+			gl.UNSIGNED_INT,
+			cast(rawptr) mesh.ebo_offset,
+			cast(u32) len(opengl_mesh_instances[kind]),
+			mesh.vbo_base_vertex, cast(u32) opengl_mesh_instance_count)
+		opengl_mesh_instance_count += len(opengl_mesh_instances[kind])
+	}
+
 	rect_instance_count := len(opengl_rect_instances)
 	gl.NamedBufferData(opengl_rect_ibo, cast(uintptr) rect_instance_count * size_of(OpenGL_Rect_Instance), raw_data(opengl_rect_instances[:]), gl.STREAM_DRAW)
 	defer clear(&opengl_rect_instances)
@@ -224,7 +478,7 @@ opengl_present :: proc "contextless" () {
 	gl.DrawElementsInstancedBaseVertexBaseInstance(
 		gl.TRIANGLES,
 		len(opengl_rect_elements),
-		gl.UNSIGNED_BYTE when OpenGL_Rect_Element == u8 else gl.UNSIGNED_INT,
+		gl.UNSIGNED_BYTE,
 		nil,
 		cast(u32) rect_instance_count,
 		0, 0)
@@ -257,5 +511,12 @@ opengl_rect :: proc(position: [3]f32, size: [2]f32, texcoords: [2][2]f32, textur
 		color = color,
 		rotation = rotation,
 		texture_index = cast(u32) texture,
+	})
+}
+
+opengl_mesh :: proc(kind: game.Mesh_Kind, world_transform: matrix[4, 4]f32, local_transform: matrix[4, 4]f32) {
+	append(&opengl_mesh_instances[kind], OpenGL_Mesh_Instance{
+		world_transform = world_transform,
+		local_transform = local_transform,
 	})
 }

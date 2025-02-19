@@ -4,9 +4,10 @@ package opengl
 DEPTH_BUFFER_BIT :: 0x00000100
 COLOR_BUFFER_BIT :: 0x00004000
 TRIANGLES :: 0x0004
+GEQUAL :: 0x0206
 SRC_ALPHA :: 0x0302
 ONE_MINUS_SRC_ALPHA :: 0x0303
-
+CULL_FACE :: 0x0B44
 BLEND :: 0x0BE2
 TEXTURE_2D :: 0x0DE1
 UNSIGNED_BYTE :: 0x1401
@@ -24,6 +25,7 @@ Clear: proc "c" (mask: u32)
 Viewport: proc "c" (x, y: i32, w, h: u32)
 GetIntegerv: proc "c" (name: u32, data: [^]i32)
 BlendFunc: proc "c" (sfactor, dfactor: u32)
+DepthFunc: proc "c" (func: u32)
 
 load_1_0 :: proc "contextless" (get_proc_addr: $T) {
 	Enable = cast(type_of(Enable)) get_proc_addr("glEnable")
@@ -32,6 +34,7 @@ load_1_0 :: proc "contextless" (get_proc_addr: $T) {
 	Viewport = cast(type_of(Viewport)) get_proc_addr("glViewport")
 	GetIntegerv = cast(type_of(GetIntegerv)) get_proc_addr("glGetIntegerv")
 	BlendFunc = cast(type_of(BlendFunc)) get_proc_addr("glBlendFunc")
+	DepthFunc = cast(type_of(DepthFunc)) get_proc_addr("glDepthFunc")
 }
 
 // 1.1
@@ -46,6 +49,7 @@ STREAM_DRAW :: 0x88E0
 STATIC_DRAW :: 0x88E4
 
 // 2.0
+LOWER_LEFT :: 0x8CA1
 FRAGMENT_SHADER :: 0x8B30
 VERTEX_SHADER :: 0x8B31
 
@@ -100,6 +104,9 @@ load_4_2 :: proc "contextless" (get_proc_addr: $T) {
 }
 
 // 4.5
+ZERO_TO_ONE :: 0x935F
+
+ClipControl: proc "c" (origin, depth: u32)
 CreateFramebuffers: proc "c" (n: u32, framebuffers: [^]u32)
 NamedFramebufferRenderbuffer: proc "c" (framebuffer, attachment, target, renderbuffer: u32)
 ClearNamedFramebufferfv: proc "c" (framebuffer, buffer: u32, index: i32, value: [^]f32)
@@ -116,6 +123,7 @@ VertexArrayAttribFormat: proc "c" (vao, attrib: u32, size: i32, type: u32, norma
 VertexArrayAttribIFormat: proc "c" (vao, attrib: u32, size: i32, type: u32, offset: u32)
 CreateBuffers: proc "c" (n: u32, buffers: [^]u32)
 NamedBufferData: proc "c" (buffer: u32, size: uintptr, data: rawptr, usage: u32)
+NamedBufferSubData: proc "c" (buffer: u32, offset: int, size: uintptr, data: rawptr)
 CreateTextures: proc "c" (kind, count: u32, textures: [^]u32)
 TextureStorage2D: proc "c" (texture, levels, internalformat, width, height: u32)
 TextureSubImage2D: proc "c" (texture: u32, level, xoffset, yoffset: i32, width, height, format, type: u32, pixels: rawptr)
@@ -123,6 +131,7 @@ BindTextureUnit: proc "c" (unit, texture: u32)
 ProgramUniform1i: proc "c" (program: u32, location, v0: i32)
 
 load_4_5 :: proc "contextless" (get_proc_addr: $T) {
+	ClipControl = cast(type_of(ClipControl)) get_proc_addr("glClipControl")
 	CreateFramebuffers = cast(type_of(CreateFramebuffers)) get_proc_addr("glCreateFramebuffers")
 	NamedFramebufferRenderbuffer = cast(type_of(NamedFramebufferRenderbuffer)) get_proc_addr("glNamedFramebufferRenderbuffer")
 	ClearNamedFramebufferfv = cast(type_of(ClearNamedFramebufferfv)) get_proc_addr("glClearNamedFramebufferfv")
@@ -139,6 +148,7 @@ load_4_5 :: proc "contextless" (get_proc_addr: $T) {
 	VertexArrayAttribIFormat = cast(type_of(VertexArrayAttribIFormat)) get_proc_addr("glVertexArrayAttribIFormat")
 	CreateBuffers = cast(type_of(CreateBuffers)) get_proc_addr("glCreateBuffers")
 	NamedBufferData = cast(type_of(NamedBufferData)) get_proc_addr("glNamedBufferData")
+	NamedBufferSubData = cast(type_of(NamedBufferSubData)) get_proc_addr("glNamedBufferSubData")
 	CreateTextures = cast(type_of(CreateTextures)) get_proc_addr("glCreateTextures")
 	TextureStorage2D = cast(type_of(TextureStorage2D)) get_proc_addr("glTextureStorage2D")
 	TextureSubImage2D = cast(type_of(TextureSubImage2D)) get_proc_addr("glTextureSubImage2D")

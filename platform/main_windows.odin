@@ -22,6 +22,7 @@ when RENDER_API == "OPENGL" {
 	renderer_present :: opengl_present
 	renderer_clear :: opengl_clear
 	renderer_rect :: opengl_rect
+	renderer_mesh :: opengl_mesh
 } else when RENDER_API == "NONE" {
 	renderer_init :: proc "contextless" () {}
 	renderer_deinit :: proc "contextless" () {}
@@ -29,6 +30,7 @@ when RENDER_API == "OPENGL" {
 	renderer_present :: proc "contextless" () {}
 	renderer_clear :: proc(color0: [4]f32, depth: f32) {}
 	renderer_rect :: proc(position: [3]f32, size: [2]f32, texcoords: [2][2]f32, texture: game.Rect_Texture, color: [4]f32, rotation: f32) {}
+	renderer_mesh :: proc(kind: game.Mesh_Kind, world_transform: matrix[4, 4]f32, local_transform: matrix[4, 4]f32) {}
 } else do #panic("Invalid RENDER_API")
 
 main :: proc() {
@@ -191,9 +193,12 @@ main :: proc() {
 		renderer: game.Renderer
 		renderer.clear = renderer_clear
 		renderer.rect = renderer_rect
+		renderer.mesh = renderer_mesh
 		input: game.Input
 		input.mouse = {cast(f32) platform_mouse.x, cast(f32) (platform_height - 1 - cast(i32) platform_mouse.y)}
 		input.lmb = platform_lmb
+		input.width = cast(f32) platform_width
+		input.height = cast(f32) platform_height
 		game.update_and_render(&renderer, &input)
 		if input.wants_quit do DestroyWindow(platform_hwnd)
 

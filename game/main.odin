@@ -1,5 +1,6 @@
 package game
 
+import "core:math/linalg"
 import "../assets/fonts"
 
 Rect_Texture :: enum {
@@ -7,15 +8,22 @@ Rect_Texture :: enum {
 	FONT = 1,
 }
 
+Mesh_Kind :: enum {
+	CUBE = 0,
+}
+
 Renderer :: struct {
 	clear: proc(color0: [4]f32, depth: f32),
 	rect: proc(position: [3]f32, size: [2]f32, texcoords: [2][2]f32, texture: Rect_Texture, color: [4]f32, rotation: f32),
+	mesh: proc(kind: Mesh_Kind, world_transform: matrix[4, 4]f32, local_transform: matrix[4, 4]f32),
 }
 
 Input :: struct {
 	mouse: [2]f32,
 	lmb: bool,
 	wants_quit: bool,
+	width: f32,
+	height: f32,
 }
 
 rect :: proc(renderer: ^Renderer, position: [2]f32, size: [2]f32, color: [4]f32, rotation: f32 = 0.0, z_index: f32 = -1.0) {
@@ -113,9 +121,16 @@ update_and_render :: proc(renderer: ^Renderer, input: ^Input) {
 	if input.lmb && !ui.lmb_prev do ui.lmb_at = input.mouse
 
 	renderer.clear({0.6, 0.2, 0.2, 1.0}, 0.0)
-	rect(renderer, {100, 100}, {100, 100}, {1.0, 0.0, 0.0, 1.0})
+	rect(renderer, {input.width / 2.0 - 2, input.height / 2.0 - 2}, {2 * 2, 2 * 2}, {1.0, 0.0, 0.0, 1.0})
 
 	if button(&ui, "Quit") do input.wants_quit = true
-	if button(&ui, "Better Font Rendering Than Unity") do input.wants_quit = true
-	if button(&ui, "Better Buttons Than Unreal") do input.wants_quit = true
+
+	cube0_position := linalg.matrix4_translate_f32({2.5, 0.0, -5.0})
+	cube1_position := linalg.matrix4_translate_f32({-2.5, 0.0, -5.0})
+	projection := linalg.matrix4_infinite_perspective_f32(1.0, input.width / input.height, 0.1)
+
+	renderer.mesh(.CUBE, projection * cube0_position, cube0_position)
+	renderer.mesh(.CUBE, projection * cube1_position, cube1_position)
+
+	text(renderer, "Asunder Alpha 0.0.1", {input.width / 2.0 - 150.0, input.height - 50.0}, color = {0.3, 0.3, 0.3, 0.6})
 }
