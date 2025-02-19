@@ -13,6 +13,8 @@ platform_keys: [256]b8;
 main :: proc() {
   using windows
 
+  #no_bounds_check game_memory_permanent := ([^]u8)(VirtualAlloc(cast(rawptr) cast(uintptr) 0, 1024 * 1024 * 1024, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE))[0:1024 * 1024 * 1024]
+
   update_cursor_clip :: proc "contextless" () {
     ClipCursor(nil);
   }
@@ -143,11 +145,16 @@ main :: proc() {
 
     clock_current: i64 = ---
     QueryPerformanceCounter(&clock_current)
+    delta := f32(clock_current - clock_previous) / f32(clock_frequency)
     defer clock_previous = clock_current;
 
     game_renderer: game.Renderer
     game_renderer.procs = renderer.procs
-    game.update_and_render(&game_renderer)
+    game_input: game.Input
+    game_input.delta = delta
+    game_memory: game.Memory
+    game_memory.permanent = game_memory_permanent
+    game.update_and_render(&game_renderer, &game_input, &game_memory)
 
     renderer.present()
 

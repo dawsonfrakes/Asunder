@@ -2,6 +2,10 @@ package windows
 
 foreign import "system:kernel32.lib"
 
+MEM_COMMIT :: 0x00001000
+MEM_RESERVE :: 0x00002000
+PAGE_READWRITE :: 0x04
+
 HINSTANCE :: distinct rawptr
 HMODULE :: HINSTANCE
 PROC :: proc "std" () -> int
@@ -14,6 +18,7 @@ foreign kernel32 {
   Sleep :: proc(duration: u32) ---
   QueryPerformanceFrequency :: proc(frequency: ^i64) -> i32 ---
   QueryPerformanceCounter :: proc(counter: ^i64) -> i32 ---
+  VirtualAlloc :: proc(address: rawptr, size: uintptr, type: u32, protect: u32) -> rawptr ---
   ExitProcess :: proc(status: u32) ---
 }
 
