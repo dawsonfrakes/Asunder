@@ -72,8 +72,8 @@ POINT :: struct {
 }
 RECT :: struct {
   left: i32,
-  right: i32,
   top: i32,
+  right: i32,
   bottom: i32,
 }
 WNDCLASSEXW :: struct {
