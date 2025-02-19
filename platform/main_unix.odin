@@ -2,6 +2,7 @@
 
 package main
 
+import "../game"
 import X "../basic/x11"
 
 platform_display: ^X.Display
@@ -48,6 +49,10 @@ main :: proc() {
 					break main_loop
 			}
 		}
+
+		game_renderer: game.Renderer
+		game_renderer.procs = renderer.procs
+		game.update_and_render(&game_renderer)
 
 		renderer.present()
 	}
