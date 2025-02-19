@@ -18,6 +18,9 @@ build :: () {
     case .WINDOWS;
       add_build_string("RENDER_API :: Render_API.OPENGL;", w);
       add_build_file("platform/main_windows.jai", w);
+    case .LINUX;
+      add_build_string("RENDER_API :: Render_API.OPENGL;", w);
+      add_build_file("platform/main_unix.jai", w);
     case;
       print("error: Target % is not supported\n", options.os_target);
   }

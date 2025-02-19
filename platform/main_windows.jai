@@ -1,13 +1,8 @@
-#load "../game/main.jai";
-
+#import "Maths";
 #import "Winblows";
 
-min :: inline (a: $T, b: T) -> T #no_context { return ifx a < b then a else b; }
-
-Render_API :: enum {
-  NONE :: 0;
-  OPENGL :: 1;
-}
+#load "../game/main.jai";
+#load "renderer.jai";
 
 platform_hinstance: HINSTANCE;
 platform_hwnd: HWND;
@@ -15,20 +10,6 @@ platform_hdc: HDC;
 platform_width: int;
 platform_height: int;
 platform_save_placement := WINDOWPLACEMENT.{length = size_of(WINDOWPLACEMENT)};
-
-#if RENDER_API == {
-  case .NONE;
-    renderer :: struct {
-      init :: () #no_context {}
-      deinit :: () #no_context {}
-      resize :: () #no_context {}
-      present :: () #no_context {}
-      clear :: (color0: [4]float32, depth: float32) {}
-    }
-  case .OPENGL;
-    #load "renderer_opengl.jai";
-    renderer :: opengl_renderer;
-}
 
 main :: () {
   update_cursor_clip :: () #no_context {
@@ -163,7 +144,7 @@ main :: () {
     defer clock_previous = clock_current;
 
     game_renderer: Game_Renderer;
-    game_renderer.clear = renderer.clear;
+    game_renderer.procs = renderer.game_procs;
     game_update_and_render(*game_renderer);
 
     renderer.present();
