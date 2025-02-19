@@ -1,3 +1,5 @@
+DEBUG :: true;
+
 #import "Basic";
 #import "Compiler";
 
@@ -11,8 +13,10 @@ build :: () {
 
   w := compiler_create_workspace();
   set_build_options(options, w);
+  add_build_string(tprint("DEBUG :: %;", DEBUG), w);
   if options.os_target == {
     case .WINDOWS;
+      add_build_string("RENDER_API :: Render_API.OPENGL;", w);
       add_build_file("platform/main_windows.jai", w);
     case;
       print("error: Target % is not supported\n", options.os_target);
