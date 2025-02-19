@@ -21,6 +21,9 @@ opengl_present :: proc "contextless" () {
   h := cast(u32) platform_height
 
   gl.Viewport(0, 0, w, h)
+
+  gl.Clear(0) // note: fixes intel driver bug
+
   opengl_platform_present()
 }
 
