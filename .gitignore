@@ -1,4 +1,5 @@
+.build/
 *.exe
 *.pdb
-*.bin
 *.dSYM
+*.app
