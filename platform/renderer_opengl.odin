@@ -1,3 +1,5 @@
+#+build windows, linux, freebsd, openbsd, netbsd, haiku
+
 package main
 
 import gl "../basic/opengl"
