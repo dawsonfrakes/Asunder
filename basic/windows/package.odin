@@ -5,7 +5,12 @@ foreign import "system:kernel32.lib"
 MEM_COMMIT :: 0x00001000
 MEM_RESERVE :: 0x00002000
 PAGE_READWRITE :: 0x04
+GENERIC_READ :: 0x80000000
+OPEN_EXISTING :: 3
+FILE_ATTRIBUTE_NORMAL :: 0x0080
+INVALID_HANDLE_VALUE :: cast(HANDLE) ~uintptr(0)
 
+HANDLE :: rawptr
 HINSTANCE :: distinct rawptr
 HMODULE :: HINSTANCE
 PROC :: proc "std" () -> int
@@ -15,6 +20,10 @@ foreign kernel32 {
   GetModuleHandleW :: proc(name: [^]u16) -> HMODULE ---
   LoadLibraryW :: proc(name: [^]u16) -> HMODULE ---
   GetProcAddress :: proc(module: HMODULE, name: cstring) -> PROC ---
+  CreateFileA :: proc(path: cstring, access, share: u32, security: rawptr, mode, flags: u32, template: HANDLE) -> HANDLE ---
+  CloseHandle :: proc(handle: HANDLE) -> i32 ---
+  GetFileSizeEx :: proc(handle: HANDLE, size: ^i64) -> i32 ---
+  ReadFile :: proc(handle: HANDLE, buffer: rawptr, length: u32, nread: ^u32, overlapped: rawptr) -> i32 ---
   Sleep :: proc(duration: u32) ---
   QueryPerformanceFrequency :: proc(frequency: ^i64) -> i32 ---
   QueryPerformanceCounter :: proc(counter: ^i64) -> i32 ---

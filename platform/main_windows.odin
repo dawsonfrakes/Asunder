@@ -10,6 +10,20 @@ platform_width: int
 platform_height: int
 platform_keys: [256]b8;
 
+read_entire_file :: proc(path: cstring, allocator := context.allocator) -> (data: []u8, ok: bool) #optional_ok {
+  using windows
+
+  file := CreateFileA(path, GENERIC_READ, 0, nil, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nil)
+  if file == INVALID_HANDLE_VALUE do return
+  defer CloseHandle(file)
+  size: i64 = ---
+  GetFileSizeEx(file, &size);
+  buf, err := make([]u8, size, allocator)
+  if err != .None do return
+  ReadFile(file, raw_data(buf), u32(size), nil, nil)
+  return buf, true
+}
+
 main :: proc() {
   using windows
 
@@ -152,6 +166,8 @@ main :: proc() {
     game_renderer.procs = renderer.procs
     game_input: game.Input
     game_input.delta = delta
+    game_input.width = f32(platform_width)
+    game_input.height = f32(platform_height)
     game_memory: game.Memory
     game_memory.permanent = game_memory_permanent
     game.update_and_render(&game_renderer, &game_input, &game_memory)

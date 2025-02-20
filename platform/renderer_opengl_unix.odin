@@ -41,7 +41,10 @@ opengl_platform_init :: proc "contextless" () {
 	glX.MakeCurrent(platform_display, platform_window, opengl_ctx)
 
 	gl.load_1_0(glX.GetProcAddress)
+	gl.load_2_0(glX.GetProcAddress)
 	gl.load_3_0(glX.GetProcAddress)
+  gl.load_4_1(glX.GetProcAddress)
+  gl.load_4_2(glX.GetProcAddress)
 	gl.load_4_5(glX.GetProcAddress)
 }
 

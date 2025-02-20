@@ -27,6 +27,7 @@ when RENDER_API == "OPENGL" {
     present = opengl_present,
     procs = {
       clear = opengl_clear,
+      rect = opengl_rect,
     },
   }
 } else {
@@ -37,6 +38,7 @@ when RENDER_API == "OPENGL" {
     present = proc "contextless" () {},
     procs = {
       clear = proc(color0: [4]f32, depth: f32) {},
+      rect = proc(position: [2]f32, size: [2]f32, color: [4]f32, texcoords: [2][2]f32, rotation: f32, texture: game.Rect_Texture) {},
     },
   }
   when RENDER_API != "NONE" do #panic("Unknown RENDER_API")

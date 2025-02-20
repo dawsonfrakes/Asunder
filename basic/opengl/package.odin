@@ -30,6 +30,8 @@ Enable: proc "c" (cap: u32)
 Disable: proc "c" (cap: u32)
 Viewport: proc "c" (x, y: i32, w, h: u32)
 GetIntegerv: proc "c" (name: u32, data: [^]i32)
+BlendFunc: proc "c" (src, dest: u32)
+DepthFunc: proc "c" (func: u32)
 
 load_1_0 :: proc "contextless" (get_proc_addr: $T) {
   Clear = auto_cast get_proc_addr("glClear")
@@ -37,6 +39,8 @@ load_1_0 :: proc "contextless" (get_proc_addr: $T) {
   Disable = auto_cast get_proc_addr("glDisable")
   Viewport = auto_cast get_proc_addr("glViewport")
   GetIntegerv = auto_cast get_proc_addr("glGetIntegerv")
+  BlendFunc = auto_cast get_proc_addr("glBlendFunc")
+  DepthFunc = auto_cast get_proc_addr("glDepthFunc")
 }
 
 // 1.1
@@ -47,10 +51,34 @@ RGBA8 :: 0x8058
 BGR :: 0x80E0
 BGRA :: 0x80E1
 
+// 1.5
+STREAM_DRAW :: 0x88E0
+STATIC_DRAW :: 0x88E4
+
 // 2.0
 FRAGMENT_SHADER :: 0x8B30
 VERTEX_SHADER :: 0x8B31
 LOWER_LEFT :: 0x8CA1
+
+CreateProgram: proc "c" () -> u32
+AttachShader: proc "c" (program, shader: u32)
+DetachShader: proc "c" (program, shader: u32)
+LinkProgram: proc "c" (program: u32)
+UseProgram: proc "c" (program: u32)
+CreateShader: proc "c" (kind: u32) -> u32
+ShaderSource: proc "c" (shader, count: u32, strings: [^]cstring, lengths: [^]i32)
+CompileShader: proc "c" (shader: u32)
+
+load_2_0 :: proc "contextless" (get_proc_addr: $T) {
+  CreateProgram = auto_cast get_proc_addr("glCreateProgram")
+  AttachShader = auto_cast get_proc_addr("glAttachShader")
+  DetachShader = auto_cast get_proc_addr("glDetachShader")
+  LinkProgram = auto_cast get_proc_addr("glLinkProgram")
+  UseProgram = auto_cast get_proc_addr("glUseProgram")
+  CreateShader = auto_cast get_proc_addr("glCreateShader")
+  ShaderSource = auto_cast get_proc_addr("glShaderSource")
+  CompileShader = auto_cast get_proc_addr("glCompileShader")
+}
 
 // 3.0
 RGBA16F :: 0x881A
@@ -73,6 +101,20 @@ load_3_0 :: proc "contextless" (get_proc_addr: $T) {
 MAX_COLOR_TEXTURE_SAMPLES ::0x910E
 MAX_DEPTH_TEXTURE_SAMPLES ::0x910F
 
+// 3.1
+ProgramUniform1i: proc "c" (program: u32, location, v0: i32)
+
+load_4_1 :: proc "contextless" (get_proc_addr: $T) {
+  ProgramUniform1i = auto_cast get_proc_addr("glProgramUniform1i")
+}
+
+// 4.2
+DrawElementsInstancedBaseVertexBaseInstance: proc "c" (mode, count, type: u32, indices: rawptr, instances: u32, basevertex: i32, baseinstance: u32)
+
+load_4_2 :: proc "contextless" (get_proc_addr: $T) {
+  DrawElementsInstancedBaseVertexBaseInstance = auto_cast get_proc_addr("glDrawElementsInstancedBaseVertexBaseInstance")
+}
+
 // 4.5
 ZERO_TO_ONE :: 0x935F
 
@@ -83,6 +125,20 @@ ClearNamedFramebufferfv: proc "c" (framebuffer, buffer: u32, drawbuffer: i32, va
 BlitNamedFramebuffer: proc "c" (from, to: u32, x1, y1, w1, h1, x2, y2, w2, h2: i32, mask, filter: u32)
 CreateRenderbuffers: proc "c" (n: u32, renderbuffers: [^]u32)
 NamedRenderbufferStorageMultisample: proc "c" (renderbuffer, samples, internalformat, width, height: u32)
+CreateVertexArrays: proc "c" (n: u32, arrays: [^]u32)
+VertexArrayElementBuffer: proc "c" (vbo, ebo: u32)
+VertexArrayVertexBuffer: proc "c" (vao, binding, buffer: u32, offset: int, stride: u32)
+VertexArrayBindingDivisor: proc "c" (vao, binding, divisor: u32)
+EnableVertexArrayAttrib: proc "c" (vao, attrib: u32)
+VertexArrayAttribBinding: proc "c" (vao, attrib, binding: u32)
+VertexArrayAttribFormat: proc "c" (vao, attrib: u32, size: i32, type: u32, normalized: bool, offset: u32)
+VertexArrayAttribIFormat: proc "c" (vao, attrib: u32, size: i32, type: u32, offset: u32)
+CreateBuffers: proc "c" (n: u32, buffers: [^]u32)
+NamedBufferData: proc "c" (buffer: u32, size: uint, data: rawptr, usage: u32)
+CreateTextures: proc "c" (target, count: u32, textures: [^]u32)
+TextureStorage2D: proc "c" (texture, levels, format, width, height: u32)
+TextureSubImage2D: proc "c" (texture: u32, level, xoff, yoff: i32, width, height, format, type: u32, pixels: rawptr)
+BindTextureUnit: proc "c" (slot, texture: u32)
 
 load_4_5 :: proc "contextless" (get_proc_addr: $T) {
   ClipControl = auto_cast get_proc_addr("glClipControl")
@@ -92,4 +148,18 @@ load_4_5 :: proc "contextless" (get_proc_addr: $T) {
   BlitNamedFramebuffer = auto_cast get_proc_addr("glBlitNamedFramebuffer")
   CreateRenderbuffers = auto_cast get_proc_addr("glCreateRenderbuffers")
   NamedRenderbufferStorageMultisample = auto_cast get_proc_addr("glNamedRenderbufferStorageMultisample")
+  CreateVertexArrays = auto_cast get_proc_addr("glCreateVertexArrays")
+  VertexArrayElementBuffer = auto_cast get_proc_addr("glVertexArrayElementBuffer")
+  VertexArrayVertexBuffer = auto_cast get_proc_addr("glVertexArrayVertexBuffer")
+  VertexArrayBindingDivisor = auto_cast get_proc_addr("glVertexArrayBindingDivisor")
+  EnableVertexArrayAttrib = auto_cast get_proc_addr("glEnableVertexArrayAttrib")
+  VertexArrayAttribBinding = auto_cast get_proc_addr("glVertexArrayAttribBinding")
+  VertexArrayAttribFormat = auto_cast get_proc_addr("glVertexArrayAttribFormat")
+  VertexArrayAttribIFormat = auto_cast get_proc_addr("glVertexArrayAttribIFormat")
+  CreateBuffers = auto_cast get_proc_addr("glCreateBuffers")
+  NamedBufferData = auto_cast get_proc_addr("glNamedBufferData")
+  CreateTextures = auto_cast get_proc_addr("glCreateTextures")
+  TextureStorage2D = auto_cast get_proc_addr("glTextureStorage2D")
+  TextureSubImage2D = auto_cast get_proc_addr("glTextureSubImage2D")
+  BindTextureUnit = auto_cast get_proc_addr("glBindTextureUnit")
 }
