@@ -16,6 +16,12 @@
 #define TARGET_CPU_ARCH_ARM64 0
 #endif
 
+#if defined(_MSC_VER)
+#define COMPILER_MSVC 1
+#else
+#define COMPILER_MSVC 0
+#endif
+
 #define cast(T) (T)
 #define size_of(T) (cast(int) sizeof(T))
 #define offset_of(T, F) (cast(int) &(cast(T*) 0)->F)
