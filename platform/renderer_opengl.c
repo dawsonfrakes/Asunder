@@ -11,6 +11,7 @@
 HGLRC opengl_ctx;
 #define X(RET, NAME, ...) RET (*NAME)(__VA_ARGS__);
 GL10_FUNCTIONS
+GL30_FUNCTIONS
 GL45_FUNCTIONS
 #undef X
 
@@ -48,6 +49,7 @@ void opengl_platform_init(void) {
 	GL10_FUNCTIONS
 	#undef X
 	#define X(RET, NAME, ...) NAME = cast(RET (*)(__VA_ARGS__)) wglGetProcAddress(#NAME);
+	GL30_FUNCTIONS
 	GL45_FUNCTIONS
 	#undef X
 }
@@ -62,10 +64,18 @@ void opengl_platform_present(void) {
 }
 #endif
 
+u32 opengl_main_fbo;
+u32 opengl_main_fbo_color0;
+u32 opengl_main_fbo_depth;
+
 void opengl_init(void) {
 	opengl_platform_init();
 
 	glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
+
+	glCreateFramebuffers(1, &opengl_main_fbo);
+	glCreateRenderbuffers(1, &opengl_main_fbo_color0);
+	glCreateRenderbuffers(1, &opengl_main_fbo_depth);
 }
 
 void opengl_deinit(void) {
@@ -73,9 +83,40 @@ void opengl_deinit(void) {
 }
 
 void opengl_resize(void) {
+	if (platform_width <= 0 || platform_height <= 0) return;
 
+	s32 fbo_color_samples_max;
+	glGetIntegerv(GL_MAX_COLOR_TEXTURE_SAMPLES, &fbo_color_samples_max);
+	s32 fbo_depth_samples_max;
+	glGetIntegerv(GL_MAX_DEPTH_TEXTURE_SAMPLES, &fbo_depth_samples_max);
+	u32 fbo_samples = cast(u32) min(fbo_color_samples_max, fbo_depth_samples_max);
+
+	glNamedRenderbufferStorageMultisample(opengl_main_fbo_color0, fbo_samples, GL_RGBA16F, cast(u32) platform_width, cast(u32) platform_height);
+	glNamedFramebufferRenderbuffer(opengl_main_fbo, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, opengl_main_fbo_color0);
+
+	glNamedRenderbufferStorageMultisample(opengl_main_fbo_depth, fbo_samples, GL_DEPTH_COMPONENT32F, cast(u32) platform_width, cast(u32) platform_height);
+	glNamedFramebufferRenderbuffer(opengl_main_fbo, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, opengl_main_fbo_depth);
 }
 
 void opengl_present(void) {
+	if (platform_width <= 0 || platform_height <= 0) return;
+
+	glBindFramebuffer(GL_FRAMEBUFFER, opengl_main_fbo);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	glClear(0); // NOTE(dfra): fixes intel driver bug
+
+	glEnable(GL_FRAMEBUFFER_SRGB);
+	glBlitNamedFramebuffer(opengl_main_fbo, 0,
+		0, 0, cast(s32) platform_width, cast(s32) platform_height,
+		0, 0, cast(s32) platform_width, cast(s32) platform_height,
+		GL_COLOR_BUFFER_BIT, GL_NEAREST);
+	glDisable(GL_FRAMEBUFFER_SRGB);
 	opengl_platform_present();
+}
+
+void opengl_clear(f32 color0[4], f32 depth) {
+	glClearNamedFramebufferfv(opengl_main_fbo, GL_COLOR, 0, color0);
+	glClearNamedFramebufferfv(opengl_main_fbo, GL_DEPTH, 0, &depth);
 }

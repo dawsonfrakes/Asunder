@@ -36,12 +36,14 @@ void renderer_none(void) {}
 #define renderer_deinit renderer_none
 #define renderer_resize renderer_none
 #define renderer_present renderer_none
+void renderer_clear(f32 color0[4], f32 depth) { (void) color0; (void) depth; }
 #elif RENDER_API == RENDER_API_OPENGL
 #include "renderer_opengl.c"
 #define renderer_init opengl_init
 #define renderer_deinit opengl_deinit
 #define renderer_resize opengl_resize
 #define renderer_present opengl_present
+#define renderer_clear opengl_clear
 #endif
 
 void update_cursor_clip(void) {
@@ -218,7 +220,10 @@ noreturn_def WINAPI WinMainCRTStartup(void) {
 		game_input.height = platform_height;
 		game_input.mouse_x = platform_mouse_x;
 		game_input.mouse_y = platform_height - 1 - platform_mouse_y;
-		game_update_and_render(&game_input);
+		Game_Renderer game_renderer;
+		zero(&game_renderer);
+		game_renderer.clear = renderer_clear;
+		game_update_and_render(&game_input, &game_renderer);
 
 		renderer_present();
 
