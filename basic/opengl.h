@@ -49,6 +49,15 @@
 #define GL_MAX_COLOR_TEXTURE_SAMPLES 0x910E
 #define GL_MAX_DEPTH_TEXTURE_SAMPLES 0x910F
 
+// 4.3
+#define GL_DEBUG_OUTPUT_SYNCHRONOUS 0x8242
+#define GL_DEBUG_OUTPUT 0x92E0
+
+typedef void (*GLDEBUGPROC)(u32, u32, u32, u32, u32, u8*, void*);
+
+#define GL43_FUNCTIONS \
+	X(void, glDebugMessageCallback, GLDEBUGPROC, void*)
+
 // 4.5
 #define GL_ZERO_TO_ONE 0x935F
 

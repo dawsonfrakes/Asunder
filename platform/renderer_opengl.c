@@ -12,6 +12,7 @@ HGLRC opengl_ctx;
 #define X(RET, NAME, ...) RET (*NAME)(__VA_ARGS__);
 GL10_FUNCTIONS
 GL30_FUNCTIONS
+GL43_FUNCTIONS
 GL45_FUNCTIONS
 #undef X
 
@@ -50,6 +51,7 @@ void opengl_platform_init(void) {
 	#undef X
 	#define X(RET, NAME, ...) NAME = cast(RET (*)(__VA_ARGS__)) wglGetProcAddress(#NAME);
 	GL30_FUNCTIONS
+	GL43_FUNCTIONS
 	GL45_FUNCTIONS
 	#undef X
 }
@@ -68,8 +70,19 @@ u32 opengl_main_fbo;
 u32 opengl_main_fbo_color0;
 u32 opengl_main_fbo_depth;
 
+void opengl_debug_proc(u32 source, u32 type, u32 id, u32 severity, u32 length, u8* message, void* user_param) {
+	(void) source; (void) type; (void) id; (void) severity; (void) user_param;
+	print_console(S("[OPENGL]: %\n"), (string) {length, message});
+}
+
 void opengl_init(void) {
 	opengl_platform_init();
+
+	if (DEBUG) {
+		glDebugMessageCallback(opengl_debug_proc, null);
+		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+		glEnable(GL_DEBUG_OUTPUT);
+	}
 
 	glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
 
@@ -113,6 +126,7 @@ void opengl_present(void) {
 		0, 0, cast(s32) platform_width, cast(s32) platform_height,
 		GL_COLOR_BUFFER_BIT, GL_NEAREST);
 	glDisable(GL_FRAMEBUFFER_SRGB);
+
 	opengl_platform_present();
 }
 

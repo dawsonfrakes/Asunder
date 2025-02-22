@@ -94,6 +94,8 @@
 #define OS OS_UNKNOWN
 #endif
 
+#include <stdarg.h>
+
 #define cast(T) (T)
 #define size_of(T) (cast(sint) sizeof(T))
 #define offset_of(T, FIELD) (cast(sint) &(cast(T*) 0)->FIELD)

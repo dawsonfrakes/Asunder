@@ -9,6 +9,9 @@
 #endif
 
 // kernel32
+#define STD_OUTPUT_HANDLE (cast(u32) -11)
+
+typedef void* HANDLE;
 typedef struct HINSTANCE__* HINSTANCE;
 typedef HINSTANCE HMODULE;
 typedef sint (WINAPI *PROC)(void);
@@ -18,6 +21,9 @@ typedef sint (WINAPI *PROC)(void);
 	X(HMODULE, LoadLibraryW, u16*) \
 	X(PROC, GetProcAddress, HMODULE, u8*) \
 	X(void, Sleep, u32) \
+	X(s32, AllocConsole, void) \
+	X(HANDLE, GetStdHandle, u32) \
+	X(s32, WriteFile, HANDLE, void*, u32, u32*, void*) \
 	X(s32, QueryPerformanceFrequency, s64*) \
 	X(s32, QueryPerformanceCounter, s64*) \
 	X(noreturn_decl, ExitProcess, u32)

@@ -22,6 +22,7 @@ DWMAPI_FUNCTIONS
 WINMM_FUNCTIONS
 #undef X
 
+HANDLE platform_stdout;
 HINSTANCE platform_hinstance;
 HWND platform_hwnd;
 HDC platform_hdc;
@@ -29,6 +30,23 @@ sint platform_width;
 sint platform_height;
 sint platform_mouse_x;
 sint platform_mouse_y;
+
+void print_console(string fmt, ...) {
+	va_list ap;
+	va_start(ap, fmt);
+	for (sint i = 0; i < fmt.count; i += 1) {
+		if (fmt.data[i] == '%') {
+			if (i + 1 >= fmt.count || fmt.data[i + 1] != '%') {
+				string arg = va_arg(ap, string);
+				WriteFile(platform_stdout, arg.data, cast(u32) arg.count, null, null);
+				continue;
+			}
+			i += 1;
+		}
+		WriteFile(platform_stdout, &fmt.data[i], 1, null, null);
+	}
+	va_end(ap);
+}
 
 #if RENDER_API == RENDER_API_NONE
 void renderer_none(void) {}
@@ -138,6 +156,11 @@ noreturn_def WINAPI WinMainCRTStartup(void) {
 	lib = LoadLibraryW(L"WINMM.DLL");
 	WINMM_FUNCTIONS
 	#undef X
+
+	if (DEBUG) {
+		AllocConsole();
+		platform_stdout = GetStdHandle(STD_OUTPUT_HANDLE);
+	}
 
 	platform_hinstance = GetModuleHandleW(null);
 
