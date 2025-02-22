@@ -78,6 +78,8 @@
 #define OS OS_WINDOWS
 #elif defined(__APPLE__) && defined(__MACH__)
 #define OS OS_MACOS
+#elif defined(__linux__)
+#define OS OS_LINUX
 #elif defined(__FreeBSD__)
 #define OS OS_FREEBSD
 #elif defined(__OpenBSD__)
@@ -108,6 +110,12 @@
 #define null (cast(void*) 0)
 #define fallthrough (cast(void) 0)
 
+#if COMPILER == COMPILER_CLANG || COMPILER == COMPILER_GCC
+#define unreachable __builtin_unreachable()
+#else
+#define unreachable (cast(void) 0)
+#endif
+
 #if COMPILER == COMPILER_CLANG || COMPILER == COMPILER_GCC || COMPILER == COMPILER_TCC
 #define noreturn_decl __attribute__((noreturn)) void
 #define noreturn_def __attribute__((noreturn)) void
@@ -133,7 +141,7 @@ typedef unsigned long long u64;
 typedef s64 sint;
 typedef u64 uint;
 
-typedef s64 intptr;
+typedef s64 sintptr;
 typedef u64 uintptr;
 #endif
 
@@ -142,17 +150,6 @@ typedef s32 b32;
 
 typedef float f32;
 typedef double f64;
-
-#define auto UNDEFINED
-#define const UNDEFINED
-#define unsigned UNDEFINED
-#define signed UNDEFINED
-#define char UNDEFINED
-#define short UNDEFINED
-#define int UNDEFINED
-#define long UNDEFINED
-#define float UNDEFINED
-#define double UNDEFINED
 
 #define SliceOf(T) \
 	struct { \
@@ -165,6 +162,8 @@ typedef SliceOf(u8) slice_u8;
 #define S(LIT) ((string) {size_of(LIT) - 1, cast(u8*) (LIT)})
 typedef slice_u8 string;
 
+#if COMPILER != COMPILER_GCC && COMPILER != COMPILER_CLANG
 void* memset(void*, s32, uint);
 void* memcpy(void*, void*, uint);
 void* memmove(void*, void*, uint);
+#endif
