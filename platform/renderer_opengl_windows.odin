@@ -51,6 +51,7 @@ opengl_platform_init :: proc() {
 
 	gl.load_1_0(get_legacy_proc)
 	gl.load_3_0(get_modern_proc)
+	gl.load_4_2(get_modern_proc)
 	gl.load_4_5(get_modern_proc)
 }
 
